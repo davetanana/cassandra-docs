@@ -1,0 +1,27 @@
+name: New runbook or improvement
+description: Propose a new page, a missing procedure, or a new test_env scenario.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What's missing or could be better
+      description: Which task can't an operator or developer do with the guide today?
+    validations: {required: true}
+  - type: input
+    id: where
+    attributes:
+      label: Where it belongs
+      description: An existing page, or the lifecycle phase (01–09) a new page would go under.
+      placeholder: 07_disaster_recovery/
+  - type: textarea
+    id: verify
+    attributes:
+      label: How it could be verified
+      description: Source files that define the names and defaults, and whether the 3-node test_env cluster can exercise it.
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Contribution
+      options:
+        - label: I'd like to write this myself

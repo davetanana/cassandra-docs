@@ -1,0 +1,27 @@
+description = "Validate the Field Guide for Apache Cassandra 5.0 against the Docker cluster in test_env/, triage failures as doc bugs or test bugs, fix them, and report."
+
+prompt = """
+Validate this documentation by following test_env/AGENTS.md, which is the source of truth. Arguments: "{{args}}"
+
+1. Choose the workflow from the arguments:
+   - empty: workflow A (all scenarios)
+   - scenario numbers such as "03 05": run only those scenarios
+   - a doc page path: workflow B. `grep -l "<file name>" test_env/scenarios/*.sh` lists the scenarios to run
+   - "release 5.0.N": workflow C
+2. Preflight:
+   - `docker info` must succeed. If it fails, tell me Docker isn't running and stop.
+   - Docker needs at least 6 GB of memory, or 9 GB for scenarios 09 and 10.
+   - If test_env/.env is missing, copy it from .env.example and tell me which image tag will be used.
+3. Run `test_env/scripts/run.sh [NN ...]` in the background, redirecting its output to a log file. A full run takes 30-45 minutes. Wait for the process to exit, then read test_env/results/LATEST.md (full run) or test_env/results/LAST_PARTIAL.md (selected scenarios).
+4. For every FAIL or WARN:
+   - Read results/<timestamp>/<scenario>.log.
+   - Reproduce the failure by hand with `docker exec cass1 nodetool ...` or `docker exec cass1 cqlsh -e "..."`.
+   - Decide whether it is a doc bug or a test bug, and fix that one. Never weaken an assertion just to make it pass.
+   - Re-run that scenario.
+5. Report:
+   - a table of the failures, each with its cause, whether it was a doc bug or a test bug, and the files you changed
+   - anything still unresolved
+   - the image and Cassandra version that were tested
+   - Don't claim a scenario passed unless the final run shows PASS.
+6. Leave the cluster running unless I asked for --down. Tell me that test_env/scripts/down.sh removes it.
+"""

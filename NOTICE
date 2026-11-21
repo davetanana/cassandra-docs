@@ -1,0 +1,24 @@
+Field Guide for Apache Cassandra(R) 5.0
+Copyright 2026 Dave Tanana and contributors
+
+This documentation is independent and is not affiliated with, endorsed by,
+or sponsored by The Apache Software Foundation or the Apache Cassandra project.
+
+Portions of this documentation (configuration excerpts, code snippets, and the
+generated reference pages in 09_reference/, which are derived from comments in
+conf/cassandra.yaml and option descriptions in the nodetool source) are taken
+from or derived from Apache Cassandra, which carries the following notice:
+
+  Apache Cassandra
+  Copyright 2009- The Apache Software Foundation
+
+  This product includes software developed by The Apache Software
+  Foundation (http://www.apache.org/).
+
+Apache Cassandra is licensed under the Apache License, Version 2.0.
+Excerpts may have been shortened or reformatted; the generated pages state the
+Cassandra version and commit they were generated from.
+
+Apache, Apache Cassandra, Cassandra, and the Cassandra logo are either
+registered trademarks or trademarks of The Apache Software Foundation in the
+United States and/or other countries.

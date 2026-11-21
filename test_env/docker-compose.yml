@@ -1,0 +1,112 @@
+# Small-scale validation cluster for the Field Guide.
+#
+#   default  : dc1 = cass1 (seed, r1), cass2 (seed, r2), cass3 (r3), RF 3
+#   replace  : cass3r, which replaces cass3 at a NEW IP (DR runbook, Scenario 1)
+#   dc2      : cass4, a 1-node second datacenter with auto_bootstrap: false (deployment runbook §6)
+#   s3       : s3mock, an S3-compatible target for the backup scripts
+#
+# Start it with ./scripts/up.sh, not by hand: up.sh waits for each node to reach UN before the next one starts.
+# Images and heap sizes can be overridden in .env (see .env.example).
+
+name: cassdocs
+
+x-cassandra: &cassandra
+  image: ${CASSANDRA_IMAGE:-cassandra:5.0}
+  environment: &cassandra-env
+    CASSANDRA_CLUSTER_NAME: docs-test
+    CASSANDRA_SEEDS: 172.30.0.11,172.30.0.12
+    CASSANDRA_ENDPOINT_SNITCH: GossipingPropertyFileSnitch
+    CASSANDRA_NUM_TOKENS: "16"
+    CASSANDRA_DC: dc1
+    MAX_HEAP_SIZE: ${MAX_HEAP_SIZE:-1G}
+    HEAP_NEWSIZE: ${HEAP_NEWSIZE:-200M}
+    # Extra JVM flags for every node, e.g. -Dcassandra.autorepair.enable=true (set by scenarios)
+    JVM_EXTRA_OPTS: ${JVM_EXTRA_OPTS_ALL:-}
+  volumes:
+    - ./shared:/shared            # staging area for snapshots, schema files and backups
+    - ./config:/test_config:ro    # yaml fragments that scenarios append (see scripts/lib.sh: apply_yaml)
+  healthcheck:
+    test: ["CMD-SHELL", "nodetool statusbinary | grep -q '^running'"]
+    interval: 10s
+    timeout: 10s
+    retries: 30
+    start_period: 60s
+  ulimits:
+    nofile: { soft: 100000, hard: 100000 }
+    memlock: { soft: -1, hard: -1 }
+
+services:
+  cass1:
+    <<: *cassandra
+    container_name: cass1
+    hostname: cass1
+    environment: { <<: *cassandra-env, CASSANDRA_RACK: r1 }
+    volumes: [ ./shared:/shared, ./config:/test_config:ro, cass1-data:/var/lib/cassandra ]
+    networks: { cassnet: { ipv4_address: 172.30.0.11 } }
+
+  cass2:
+    <<: *cassandra
+    container_name: cass2
+    hostname: cass2
+    environment: { <<: *cassandra-env, CASSANDRA_RACK: r2 }
+    volumes: [ ./shared:/shared, ./config:/test_config:ro, cass2-data:/var/lib/cassandra ]
+    networks: { cassnet: { ipv4_address: 172.30.0.12 } }
+    depends_on: { cass1: { condition: service_healthy } }
+
+  cass3:
+    <<: *cassandra
+    container_name: cass3
+    hostname: cass3
+    environment: { <<: *cassandra-env, CASSANDRA_RACK: r3 }
+    volumes: [ ./shared:/shared, ./config:/test_config:ro, cass3-data:/var/lib/cassandra ]
+    networks: { cassnet: { ipv4_address: 172.30.0.13 } }
+    depends_on: { cass2: { condition: service_healthy } }
+
+  # Replacement for cass3 at a new IP. It is not a seed, starts with empty volumes, and uses the replace flag.
+  cass3r:
+    <<: *cassandra
+    profiles: [replace]
+    container_name: cass3r
+    hostname: cass3r
+    environment:
+      <<: *cassandra-env
+      CASSANDRA_RACK: r3
+      JVM_EXTRA_OPTS: "-Dcassandra.replace_address_first_boot=172.30.0.13 ${JVM_EXTRA_OPTS_ALL:-}"
+    volumes: [ ./shared:/shared, ./config:/test_config:ro, cass3r-data:/var/lib/cassandra ]
+    networks: { cassnet: { ipv4_address: 172.30.0.23 } }
+
+  # Second datacenter. auto_bootstrap: false is appended before startup (deployment runbook §6).
+  cass4:
+    <<: *cassandra
+    profiles: [dc2]
+    container_name: cass4
+    hostname: cass4
+    environment: { <<: *cassandra-env, CASSANDRA_DC: dc2, CASSANDRA_RACK: r1 }
+    command:
+      - bash
+      - -c
+      - "grep -q '^auto_bootstrap:' /etc/cassandra/cassandra.yaml || echo 'auto_bootstrap: false' >> /etc/cassandra/cassandra.yaml; exec docker-entrypoint.sh cassandra -f"
+    volumes: [ ./shared:/shared, ./config:/test_config:ro, cass4-data:/var/lib/cassandra ]
+    networks: { cassnet: { ipv4_address: 172.30.0.21 } }
+
+  # S3-compatible target (Adobe S3Mock, HTTP on 9090; it accepts any credentials).
+  # MinIO's community images are no longer published on Docker Hub, so this uses S3Mock instead.
+  s3:
+    image: ${S3_IMAGE:-adobe/s3mock@sha256:ab01a6946750f451ca215a47e91030695b260e4003b8a5a6201d25029b8fca92}
+    profiles: [s3]
+    container_name: s3mock
+    environment:
+      COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS: backups
+    networks: { cassnet: { ipv4_address: 172.30.0.40 } }
+
+networks:
+  cassnet:
+    ipam:
+      config: [ { subnet: 172.30.0.0/24 } ]
+
+volumes:
+  cass1-data:
+  cass2-data:
+  cass3-data:
+  cass3r-data:
+  cass4-data:

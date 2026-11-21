@@ -1,0 +1,13 @@
+# Built AI bundle (tools/build_ai_bundle.py); CI attaches it to releases
+dist/
+# Python
+__pycache__/
+*.pyc
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+*.swp
+# Local agent settings (keep shared .claude/skills and .gemini/commands)
+.claude/settings.local.json
+.env

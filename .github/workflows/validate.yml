@@ -1,0 +1,52 @@
+name: validate-on-cluster
+# Runs test_env scenarios against a real Docker cluster. Manual, plus a monthly scheduled run to catch
+# image changes (cassandra:5.0 moves to each new 5.0.x release).
+on:
+  workflow_dispatch:
+    inputs:
+      scenarios:
+        description: "Scenario prefixes, space-separated (empty = all)"
+        required: false
+        default: ""
+      image:
+        description: "Cassandra image to test"
+        required: false
+        default: "cassandra:5.0"
+  schedule:
+    - cron: "0 6 1 * *"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    defaults:
+      run:
+        working-directory: test_env
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        env:
+          IMAGE: ${{ inputs.image || 'cassandra:5.0' }}
+        run: |
+          cp .env.example .env
+          sed -i "s#^CASSANDRA_IMAGE=.*#CASSANDRA_IMAGE=${IMAGE}#" .env
+          git clone --depth 1 --branch cassandra-5.0 https://github.com/apache/cassandra.git "$RUNNER_TEMP/cassandra"
+          sed -i "s#^CASSANDRA_SRC=.*#CASSANDRA_SRC=$RUNNER_TEMP/cassandra#" .env
+          sudo apt-get install -y shellcheck >/dev/null
+          free -g; docker version --format '{{.Server.Version}}'
+      - name: Run scenarios
+        env:
+          SCENARIOS: ${{ inputs.scenarios }}
+        # SCENARIOS is deliberately unquoted: it is a space-separated list of prefixes
+        run: scripts/run.sh --down $SCENARIOS
+      - name: Summary
+        if: always()
+        run: cat "$(ls -d results/2*/ | tail -1)summary.md" >> "$GITHUB_STEP_SUMMARY" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: validation-results
+          path: test_env/results/
