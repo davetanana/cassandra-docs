@@ -1,0 +1,49 @@
+name: docs-checks
+# Fast static checks on every push and pull request: links, drift against the Cassandra source,
+# llms.txt freshness, and bash syntax/shellcheck for the test environment and doc snippets.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static:
+    runs-on: ubuntu-latest
+    env:
+      CASSANDRA_BRANCH: cassandra-5.0
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Fetch Apache Cassandra source (${{ env.CASSANDRA_BRANCH }})
+        run: git clone --depth 1 --branch "$CASSANDRA_BRANCH" https://github.com/apache/cassandra.git "$RUNNER_TEMP/cassandra"
+      - name: Relative links and anchors
+        run: python3 tools/check_links.py
+      - name: Drift check (nodetool commands, flags, yaml keys)
+        run: python3 tools/check_docs.py "$RUNNER_TEMP/cassandra"
+      - name: Generated references are current
+        run: |
+          python3 tools/gen_yaml_reference.py     "$RUNNER_TEMP/cassandra" -o 09_reference/01_cassandra_yaml_reference.md
+          python3 tools/gen_nodetool_reference.py "$RUNNER_TEMP/cassandra" -o 09_reference/02_nodetool_reference.md
+          if ! git diff --quiet -- 09_reference; then
+            echo "::warning::The ${CASSANDRA_BRANCH} branch has moved on since the reference pages were generated. Regenerate them (see tools/README.md)."
+            git diff --stat -- 09_reference
+          fi
+      - name: llms.txt is current
+        run: python3 tools/build_ai_bundle.py --check
+      - name: Shell scripts
+        run: |
+          sudo apt-get install -y shellcheck >/dev/null
+          for f in test_env/scripts/*.sh test_env/scenarios/*.sh; do bash -n "$f"; done
+          shellcheck -S error test_env/scripts/*.sh test_env/scenarios/*.sh
+      - name: Build AI bundle
+        run: python3 tools/build_ai_bundle.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ai-bundle
+          path: dist/

@@ -1,0 +1,26 @@
+name: Documentation error
+description: A claim in the guide is wrong, outdated, or doesn't match your Cassandra 5.0.x cluster.
+labels: [doc-error]
+body:
+  - type: input
+    id: page
+    attributes:
+      label: Page and section
+      placeholder: 06_operations_and_housekeeping/06_auto_repair.md#2-enabling-it-two-switches
+    validations: {required: true}
+  - type: textarea
+    id: claim
+    attributes:
+      label: What the guide says, and what actually happens
+    validations: {required: true}
+  - type: input
+    id: version
+    attributes:
+      label: Cassandra version and config template
+      placeholder: 5.0.9, cassandra_latest.yaml
+    validations: {required: true}
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Command output, a link to the Cassandra source, or a JIRA ticket. Remove hostnames, IPs and credentials.
