@@ -1,5 +1,8 @@
 # Quickstart: Your First 15 Minutes with Cassandra 5.0
 
+> [!CAUTION]
+> Commands on this page can change or delete data and affect running clusters. Try them on a test or staging cluster first, and read the [disclaimer](../README.md#disclaimer). The guide is provided "as is", without warranty.
+
 This page takes you from nothing to a running Cassandra 5.0 node, a table designed the Cassandra way, an index, and a small application that reads and writes it. Each step says which idea it shows and links to the page that explains it.
 
 > [!WARNING]

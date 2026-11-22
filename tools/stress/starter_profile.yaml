@@ -1,0 +1,47 @@
+# Starter cassandra-stress user profile for capacity planning.
+# See 05_cluster_deployment_and_config/05_capacity_planning.md, section 8.
+#
+# Replace the table with your own, set the column sizes and distributions to match real rows, and set the
+# replication to your datacenter names and RF before you benchmark. The defaults here are illustrative.
+# Run it against a STAGING cluster only: it creates a keyspace and writes data.
+
+keyspace: stress_plan
+keyspace_definition: |
+  CREATE KEYSPACE stress_plan
+    WITH replication = {'class': 'NetworkTopologyStrategy', 'datacenter1': 1};
+
+table: events_by_account
+table_definition: |
+  CREATE TABLE events_by_account (
+    account_id  bigint,
+    event_time  timestamp,
+    event_id    uuid,
+    event_type  text,
+    payload     text,
+    PRIMARY KEY ((account_id), event_time, event_id)
+  ) WITH CLUSTERING ORDER BY (event_time DESC, event_id ASC)
+    AND compaction = {'class': 'UnifiedCompactionStrategy'};
+
+columnspec:
+  - name: account_id
+    population: uniform(1..1M)      # distinct partitions; set to your real partition count
+  - name: event_time
+    cluster: uniform(1..200)        # rows per partition; keep partitions realistic (well under 100 MB)
+  - name: event_type
+    size: fixed(12)
+    population: uniform(1..20)
+  - name: payload
+    size: gaussian(200..2000)       # bytes per row: match your average row size
+
+insert:
+  partitions: fixed(1)              # one partition per write, as most applications do
+  select: fixed(1)/200              # write about one row per operation
+  batchtype: UNLOGGED
+
+queries:
+  latest:                           # the read your application does most
+    cql: SELECT * FROM events_by_account WHERE account_id = ? LIMIT 20
+    fields: samerow
+  one_row:
+    cql: SELECT * FROM events_by_account WHERE account_id = ? AND event_time = ? AND event_id = ?
+    fields: samerow

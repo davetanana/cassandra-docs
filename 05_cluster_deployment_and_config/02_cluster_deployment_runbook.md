@@ -1,5 +1,8 @@
 # Production Cluster Deployment Runbook
 
+> [!CAUTION]
+> Commands on this page can change or delete data and affect running clusters. Try them on a test or staging cluster first, and read the [disclaimer](../README.md#disclaimer). The guide is provided "as is", without warranty.
+
 This runbook covers provisioning, configuring, bootstrapping and validating a multi-node, multi-datacenter Apache Cassandra 5.0 cluster from scratch, and then adding a datacenter to a live cluster.
 
 ---
@@ -7,6 +10,8 @@ This runbook covers provisioning, configuring, bootstrapping and validating a mu
 ## 1. Pre-Flight Planning
 
 Decide these before touching a server. Several **cannot be changed later** without rebuilding nodes.
+
+Work out the node count and machine type first: see [capacity planning](05_capacity_planning.md).
 
 | Decision | Notes |
 | :--- | :--- |
@@ -193,7 +198,7 @@ On a brand-new empty cluster there is no data to stream, so each join is quick.
    ```bash
    nodetool rebuild -- dc1
    ```
-   `rebuild` streams from the named source DC. It adds load on the source DC, so throttle it with `nodetool setstreamthroughput` if needed. If a rebuild fails, re-run it on that node.
+   `rebuild` streams from the named source DC. It adds load on the source DC, so throttle it with `nodetool setstreamthroughput -m <MiB/s>` if needed (without `-m` the value is in megabits/s). If a rebuild fails, re-run it on that node.
 6. **Remove `auto_bootstrap: false`** from the new nodes' config so future replacements bootstrap normally.
 7. Point the new DC's clients at it, then run a full repair to confirm consistency.
 

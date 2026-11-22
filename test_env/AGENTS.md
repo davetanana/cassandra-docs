@@ -91,6 +91,8 @@ For each FAIL: open `results/<ts>/<scenario>.log`, reproduce by hand, then class
   - `avg()` and `collection_avg()` of an integer column are truncated to an integer
   - cqlsh in batch mode (`-e`, `-f`, piped input) keeps going after a failed statement and exits 2 at the end
   - `cast()` of a bare constant in the select list is refused ("Cannot infer type"); use a type hint such as `(double)2`
+- **Found while measuring SAI for the capacity-planning page:** a vector index made rewriting the same SSTables about 100 times slower (251 s against 3 s for 200,000 rows), and `cassandra-stress` (5.0.9) can't read `vector` types: it logs a parse error for any vector table on the cluster, and a profile with a vector column fails with "Unable to find table". The page's stress example sends stderr to a log for that reason.
+- **Found while writing the capacity-planning page:** `nodetool setstreamthroughput <n>` takes megabits/s unless `-m` is given. The nodetool guide said MiB/s. Now a check in scenario 04.
 
 ## Files
 

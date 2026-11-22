@@ -1,5 +1,8 @@
 # Built-in Auto Repair (CEP-37)
 
+> [!CAUTION]
+> Commands on this page can change or delete data and affect running clusters. Try them on a test or staging cluster first, and read the [disclaimer](../README.md#disclaimer). The guide is provided "as is", without warranty.
+
 Cassandra 5.0.8 and later includes a repair scheduler that runs inside every node. It decides which nodes repair next, splits each node's token ranges into bounded assignments, retries failures, and records its progress in replicated tables. It replaces external schedulers such as Reaper or cron scripts. This branch (5.0.10) includes it.
 
 This page goes further than the [official auto repair page](https://cassandra.apache.org/doc/5.0/cassandra/managing/operating/auto_repair.html). It adds a rollout runbook and alerting, notes where the official page and the shipped yaml comments differ from the code, and verifies every default against `AutoRepairConfig.java` and `RepairTokenRangeSplitter.java`.

@@ -1,5 +1,8 @@
 # Security Hardening: Authentication, Authorization, Encryption & Auditing
 
+> [!CAUTION]
+> Commands on this page can change or delete data and affect running clusters. Try them on a test or staging cluster first, and read the [disclaimer](../README.md#disclaimer). The guide is provided "as is", without warranty.
+
 Out of the box, Cassandra 5.0 has **no security enabled**. Both shipped templates (`conf/cassandra.yaml` and `conf/cassandra_latest.yaml`) default to:
 
 | Setting | Shipped default | Effect |

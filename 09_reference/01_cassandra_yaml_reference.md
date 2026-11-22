@@ -1,5 +1,8 @@
 # cassandra.yaml Reference (generated)
 
+> [!CAUTION]
+> Commands and settings on this page can change or delete data and affect running clusters. Try them on a test or staging cluster first, and read the [disclaimer](../README.md#disclaimer). The guide is provided "as is", without warranty.
+
 > [!NOTE]
 > **Generated** from Apache Cassandra **5.0.10** at git commit `47227d98bf` (`conf/cassandra.yaml`, `conf/cassandra_latest.yaml`, `Config.java`). Do not edit by hand.
 > Regenerate with: `python3 tools/gen_yaml_reference.py <cassandra-checkout> -o 09_reference/01_cassandra_yaml_reference.md`

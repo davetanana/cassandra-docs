@@ -1,5 +1,8 @@
 # Nodetool Operations Manual: Commands, Diagnostics & Administration
 
+> [!CAUTION]
+> Commands on this page can change or delete data and affect running clusters. Try them on a test or staging cluster first, and read the [disclaimer](../README.md#disclaimer). The guide is provided "as is", without warranty.
+
 `nodetool` is the command-line administration tool for a Cassandra node. It talks to the node over JMX (port 7199, bound to localhost by default). Run `nodetool help <command>` for the full option list of any command. The sample outputs below are abridged.
 
 ---
@@ -264,6 +267,6 @@ These settings change only the running process. They are lost on restart unless 
 | `nodetool setcompactionthroughput 64` | Caps compaction I/O at 64 MiB/s (`0` disables the cap). `getcompactionthroughput` shows the current value. |
 | `nodetool setconcurrentcompactors 4` | Changes the number of concurrent compaction threads. |
 | `nodetool setconcurrency ReadStage 64` | Changes a stage's maximum concurrency (for example `ReadStage`, `MutationStage`). `getconcurrency` lists current values. |
-| `nodetool setstreamthroughput <MiB/s>` | Caps streaming throughput for bootstrap, repair and rebuild. |
+| `nodetool setstreamthroughput -m 100` | Caps streaming throughput for bootstrap, repair and rebuild at 100 MiB/s (`-e` sets the entire-SSTable streaming cap, also in MiB/s). **Without `-m` the value is in megabits/s**: `setstreamthroughput 100` is about 12 MiB/s. `getstreamthroughput -m` shows the current value. |
 | `nodetool settimeout read 5000` | Changes a timeout in ms. Types: `read, range, write, counterwrite, cascontention, truncate, internodeconnect, internodeuser, internodestreaminguser, misc`. |
 | `nodetool reloadssl` | Reloads TLS keystores and truststores, for certificate rotation without a restart. |

@@ -1,5 +1,8 @@
 # CQL Quick Reference (Cassandra 5.0, CQL 3.4.7)
 
+> [!CAUTION]
+> Commands on this page can change or delete data and affect running clusters. Try them on a test or staging cluster first, and read the [disclaimer](../README.md#disclaimer). The guide is provided "as is", without warranty.
+
 A practical cheat sheet of the CQL syntax that Cassandra 5.0 accepts. Every statement form below was checked against the 5.0 grammar ([`src/antlr/Parser.g`](https://github.com/apache/cassandra/blob/cassandra-5.0/src/antlr/Parser.g)). Defaults come from the schema code. For the full specification, see the official CQL reference linked in [Sources](#sources). Modeling advice lives in [Schema Design Patterns](../02_data_modeling_and_indexing/01_schema_design_patterns.md) and [Indexing & Vector Search](../02_data_modeling_and_indexing/02_indexing_and_vector_search.md).
 
 For worked examples with their output and the exact errors for refused queries, see [Querying with CQL](../03_application_development/05_querying_with_cql.md). Every function, with arguments, return type and an example, is in the [CQL functions reference](05_cql_functions.md). The shell itself is covered in the [cqlsh reference](06_cqlsh.md).

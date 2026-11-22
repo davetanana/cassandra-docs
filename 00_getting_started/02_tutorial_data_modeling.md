@@ -1,5 +1,8 @@
 # Tutorial: Model a Chat App, from Questions to Tables
 
+> [!CAUTION]
+> Commands on this page can change or delete data and affect running clusters. Try them on a test or staging cluster first, and read the [disclaimer](../README.md#disclaimer). The guide is provided "as is", without warranty.
+
 In this tutorial you design the data model for a small chat application, build it, query it, and then use tracing to prove that one tempting design would slowly degrade. It takes about 30 minutes. You'll practice the core Cassandra skill: start from the questions the application asks, not from the entities.
 
 Every query in this tutorial is run against Cassandra 5.0 by [`test_env` scenario 14](../test_env/README.md), and the output is compared with what this page shows.

@@ -9,6 +9,7 @@ Corrections, new runbooks and new validation scenarios are all welcome. This gui
 3. **Don't edit generated pages by hand.** `09_reference/01_cassandra_yaml_reference.md`, `09_reference/02_nodetool_reference.md` and `llms.txt` are generated; see [tools/README.md](tools/README.md).
 4. **Write only original text.** Don't paste text from vendor docs, blogs, Stack Overflow or other non-Apache-2.0 sources; paraphrase and link instead. Excerpts from Apache Cassandra (Apache-2.0) are fine, with attribution.
 5. **Follow the trademark rules** in [AGENTS.md](AGENTS.md#licensing-and-trademarks-required). Don't present this guide as official ASF documentation.
+6. **Keep the disclaimer notice.** Every guide page starts with the `[!CAUTION]` notice under its title that links to the [disclaimer](README.md#disclaimer). Copy it into new pages. Commands that change data, configuration or topology need a warning, and must not target production by default.
 
 ## How to submit a change
 

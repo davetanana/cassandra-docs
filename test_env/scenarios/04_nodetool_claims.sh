@@ -2,7 +2,8 @@
 # DOC: 06_operations_and_housekeeping/01_nodetool_operations_guide.md, 02_housekeeping_and_automations.md
 # CLAIMS: compact with no flags is a MAJOR compaction; a bare clearsnapshot is refused; -pr cannot be
 #         combined with -dc; setconcurrency exists and setconcurrentreads does not; refresh is
-#         deprecated; sample output field names; snapshot --ttl and clearsnapshot --older-than work.
+#         deprecated; sample output field names; snapshot --ttl and clearsnapshot --older-than work;
+#         setstreamthroughput takes megabits/s unless -m (MiB/s) is given.
 set -uo pipefail
 source "$(dirname "$0")/../scripts/lib.sh"
 require_nodes cass1 cass2 cass3
@@ -22,6 +23,14 @@ else pass "$NT#7" "setconcurrentreads does not exist"; fi
 check_contains "$NT#3" "refresh prints its deprecation notice" "deprecated" nt $SEED refresh ntks t
 check_ok       "$NT#7" "settimeout read 5000" nt $SEED settimeout read 5000
 check_contains "$NT#7" "gettimeout read shows 5000" "5000" nt $SEED gettimeout read
+# setstreamthroughput takes megabits/s unless -m is given (SetStreamThroughput.java)
+nt $SEED setstreamthroughput 100 >/dev/null 2>&1
+check_contains "$NT#7" "setstreamthroughput 100 (no -m) means 100 megabits/s, about 11.9 MiB/s" "11.92" nt $SEED getstreamthroughput -m
+check_ok       "$NT#7" "setstreamthroughput -m 100 sets MiB/s" nt $SEED setstreamthroughput -m 100
+check_contains "$NT#7" "getstreamthroughput -m shows 100.0 MiB/s" "100.0 MiB/s" nt $SEED getstreamthroughput -m
+check_contains "$NT#7" "setstreamthroughput -e sets the entire-SSTable cap in MiB/s" "100.0 MiB/s" \
+  bash -c "docker exec $SEED nodetool setstreamthroughput -e 100 && docker exec $SEED nodetool getstreamthroughput -e"
+nt $SEED setstreamthroughput -m 24 >/dev/null 2>&1; nt $SEED setstreamthroughput -e 24 >/dev/null 2>&1
 
 check_contains "$NT#2" "tablestats field 'Compacted partition maximum bytes'" "Compacted partition maximum bytes" nt $SEED tablestats ntks.t
 check_contains "$NT#2" "tablestats field 'Maximum tombstones per slice (last five minutes)'" \

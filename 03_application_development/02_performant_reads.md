@@ -1,5 +1,8 @@
 # Performant Reads: Latency Minimization & Query Optimization
 
+> [!CAUTION]
+> Commands on this page can change or delete data and affect running clusters. Try them on a test or staging cluster first, and read the [disclaimer](../README.md#disclaimer). The guide is provided "as is", without warranty.
+
 Cassandra writes are append-only and cheap; reads are more expensive because they may need to merge data from the memtable and several SSTables, on one or more replicas. To achieve consistently low read latencies, you must design your reads around **partition boundaries**.
 
 ---

@@ -1,5 +1,8 @@
 # Performant Writes: Maximizing Throughput & Minimizing Overhead
 
+> [!CAUTION]
+> Commands on this page can change or delete data and affect running clusters. Try them on a test or staging cluster first, and read the [disclaimer](../README.md#disclaimer). The guide is provided "as is", without warranty.
+
 Writing data to Apache Cassandra is inherently fast because writes are appended to an in-memory memtable (`SkipListMemtable` by default in 5.0; `TrieMemtable` is opt-in, and is the default in `cassandra_latest.yaml`) and to the sequential on-disk `CommitLog`. However, application developers frequently cripple their write performance by making poor client choices.
 
 Here is how to get the most write throughput out of your cluster. Actual numbers depend on hardware, replication factor (RF), consistency level (CL), and row size.

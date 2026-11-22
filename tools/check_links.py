@@ -5,7 +5,9 @@ Usage: python3 tools/check_links.py [--docs DOCS_DIR]
 
 External (http/https/mailto) links are not fetched. A relative link must point
 to an existing file or directory, and a #fragment must match a heading in the
-target page using GitHub's anchor rules. Exits 1 if any link is broken.
+target page using GitHub's anchor rules. It also checks that every guide page (the numbered
+folders) links to the README disclaimer near its top. Exits 1 if any link is broken or a
+guide page lacks the disclaimer notice.
 Standard library only.
 """
 import argparse
@@ -81,7 +83,17 @@ def main():
                         print(f'{rel}:{no}: no heading for #{frag} in {os.path.relpath(dest, args.docs)}')
                         broken += 1
     print(f'{checked} relative link(s) checked, {broken} broken')
-    return 1 if broken else 0
+    missing = []
+    for page in sorted(md_files(args.docs)):
+        rel = os.path.relpath(page, args.docs)
+        if re.match(r'\d\d_[^/]+/[^/]+\.md$', rel.replace(os.sep, '/')):
+            with open(page, encoding='utf-8') as f:
+                head = ''.join(f.readlines()[:8])
+            if 'README.md#disclaimer' not in head:
+                missing.append(rel)
+    for rel in missing:
+        print(f'{rel}: no [!CAUTION] notice linking to README.md#disclaimer under the title')
+    return 1 if broken or missing else 0
 
 
 if __name__ == '__main__':

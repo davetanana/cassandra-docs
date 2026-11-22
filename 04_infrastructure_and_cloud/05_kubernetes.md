@@ -1,5 +1,8 @@
 # Cassandra 5.0 on Kubernetes
 
+> [!CAUTION]
+> Commands on this page can change or delete data and affect running clusters. Try them on a test or staging cluster first, and read the [disclaimer](../README.md#disclaimer). The guide is provided "as is", without warranty.
+
 Kubernetes can run Cassandra well, but only with an operator that understands Cassandra. This page explains what the operator does for you, gives a minimal Cassandra 5.0 datacenter definition, and lists the Cassandra rules that still apply inside Kubernetes.
 
 The examples use **cass-operator** from the K8ssandra project (Apache-2.0), the most widely used open-source Cassandra operator. Field names and default behaviors below were checked against the cass-operator source (`v1.33.x`, November 2026). K8ssandra also ships `k8ssandra-operator`, which wraps cass-operator and adds Reaper (repair), Medusa (backups) and multi-cluster support.
@@ -79,7 +82,7 @@ spec:
       role_manager: CassandraRoleManager
 ```
 
-Replace each `<…>` value: the three zone names your cloud uses, and a StorageClass backed by local NVMe or SSD block storage. The sizes are illustrative; size them with the [configuration and tuning](../05_cluster_deployment_and_config/01_configuration_and_tuning.md) and [Java & JVM flavors](01_java_and_jvm_flavors.md) pages.
+Replace each `<…>` value: the three zone names your cloud uses, and a StorageClass backed by local NVMe or SSD block storage. The sizes are illustrative. Work out the node count and machine type with [capacity planning](../05_cluster_deployment_and_config/05_capacity_planning.md), then set the pod resources with the [configuration and tuning](../05_cluster_deployment_and_config/01_configuration_and_tuning.md) and [Java & JVM flavors](01_java_and_jvm_flavors.md) pages.
 
 What each part does:
 * **`metadata.name`** becomes the Cassandra datacenter name, unless you set `spec.datacenterName`. Use it in `NetworkTopologyStrategy` replication and as the driver's local datacenter.
@@ -109,6 +112,7 @@ Kubernetes doesn't remove any of the operational work in this guide.
 * **Storage.** Use `ReadWriteOnce` block storage: local NVMe (with a local-volume provisioner) or SSD-backed cloud disks. Never use network filesystems (NFS, RWX volumes). Local NVMe gives the best performance, but its data is lost if the pod moves to another worker, so plan for node replacement. The cloud guides ([AWS](02_aws_deployment_guide.md), [GCP](03_gcp_deployment_guide.md), [Azure](04_azure_deployment_guide.md)) compare the disk options.
 * **Memory.** The container's memory limit must cover the heap **and** off-heap memory: direct memory, memtables if `memtable_allocation_type` puts them off-heap, the chunk cache, bloom filters and compression metadata. Set the heap explicitly; don't size it from the limit. If the limit is too tight, the kernel kills the container (`OOMKilled`) with no Java error in the log. See [Java & JVM flavors](01_java_and_jvm_flavors.md).
 * **CPU.** Set CPU requests equal to limits. CPU throttling under a limit causes the same latency spikes as a GC pause.
+* **Capacity.** With one Cassandra pod per worker, the node count from [capacity planning](../05_cluster_deployment_and_config/05_capacity_planning.md) is the worker count. Use the worker's machine type as the profile: a PVC on a cloud disk (EBS, Hyperdisk, Premium SSD v2) is the network-storage case, with its per-VM IOPS cap, and a local-volume provisioner on NVMe is the local case. The Linux page cache that serves most reads is charged to the pod's memory limit, so the memory above the heap and off-heap allowance decides the cache hit rate (`--cache-hit`). Benchmark with the pod limits you will run in production.
 * **Repair.** Data still needs repair within `gc_grace_seconds`. Use the built-in [auto-repair](../06_operations_and_housekeeping/06_auto_repair.md) (5.0.8+) or Reaper (included in k8ssandra-operator).
 * **Backups.** Snapshots on a PVC are not backups. Copy them off the cluster: Medusa (included in k8ssandra-operator) or the procedures in [backup and disaster recovery](../07_disaster_recovery/01_backup_and_disaster_recovery.md).
 * **Clients outside Kubernetes.** Drivers connect to every node's address, not to one load-balanced address. Clients outside the Kubernetes network need routable pod IPs, host networking, or a driver address translator. A single `LoadBalancer` Service in front of Cassandra doesn't work for token-aware drivers.

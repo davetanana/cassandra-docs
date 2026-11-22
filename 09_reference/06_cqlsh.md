@@ -1,5 +1,8 @@
 # cqlsh: The CQL Shell (Cassandra 5.0)
 
+> [!CAUTION]
+> Commands on this page can change or delete data and affect running clusters. Try them on a test or staging cluster first, and read the [disclaimer](../README.md#disclaimer). The guide is provided "as is", without warranty.
+
 `cqlsh` is the command-line client that ships with Cassandra. Use it to explore a cluster, run schema changes, script one-off queries, and export or import small tables as CSV. This page covers how to run it, interactive and scripted use, output formats, every shell command, configuration files and `COPY`. Options and defaults come from the 5.0 source ([`pylib/cqlshlib/cqlshmain.py`](https://github.com/apache/cassandra/blob/cassandra-5.0/pylib/cqlshlib/cqlshmain.py) and [`copyutil.py`](https://github.com/apache/cassandra/blob/cassandra-5.0/pylib/cqlshlib/copyutil.py)).
 
 Examples with output use the quickstart node and the `examples` keyspace from [Querying with CQL, section 1](../03_application_development/05_querying_with_cql.md#1-set-up-the-sample-data). [`test_env` scenario 14](../test_env/README.md) runs them against Cassandra 5.0 and compares the output with this page. Other tools (`sstableloader`, the SSTable tools, `cassandra-stress`) are in the [tools reference](03_tools_reference.md).

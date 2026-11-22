@@ -1,5 +1,8 @@
 # Client Driver Best Practices & Architecture
 
+> [!CAUTION]
+> Commands on this page can change or delete data and affect running clusters. Try them on a test or staging cluster first, and read the [disclaimer](../README.md#disclaimer). The guide is provided "as is", without warranty.
+
 Your application talks to Cassandra through a native-protocol driver: the Apache Cassandra Java driver (formerly the DataStax Java driver), or drivers for Python, Go, Node.js, C#, Rust and others. Cassandra 5.0 speaks native protocol v3, v4 and v5 (v5 is the current version; v6 is beta only), and drivers negotiate the highest version both sides support.
 
 Configuring the driver properly is just as important as writing correct CQL. Rules 1–6 use the Java driver 4.x (`application.conf` / HOCON) for examples. [Section 7](#7-python-go-and-nodejs-same-rules-different-defaults) covers the Python, Go and Node.js drivers, whose defaults differ in ways that matter.

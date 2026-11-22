@@ -1,5 +1,8 @@
 # Building, Running & Testing Cassandra from Source
 
+> [!CAUTION]
+> Commands on this page can change or delete data and affect running clusters. Try them on a test or staging cluster first, and read the [disclaimer](../README.md#disclaimer). The guide is provided "as is", without warranty.
+
 This page is for engineers working **on** the Apache Cassandra source ([apache/cassandra](https://github.com/apache/cassandra), `cassandra-5.0` branch, currently `5.0.10` per `base.version` in `build.xml`) rather than running a packaged release. For the contribution process (JIRA, branch naming, CI artifacts), read [`CONTRIBUTING.md`](https://github.com/apache/cassandra/blob/cassandra-5.0/CONTRIBUTING.md). For what and how to test, read [`TESTING.md`](https://github.com/apache/cassandra/blob/cassandra-5.0/TESTING.md).
 
 ---

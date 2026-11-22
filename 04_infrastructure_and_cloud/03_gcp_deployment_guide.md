@@ -1,28 +1,37 @@
 # GCP Deployment Guide
 
+> [!CAUTION]
+> Commands on this page can change or delete data and affect running clusters. Try them on a test or staging cluster first, and read the [disclaimer](../README.md#disclaimer). The guide is provided "as is", without warranty.
+
 Running Apache Cassandra 5.0 on Google Compute Engine (GCE) means choosing between Local SSD and network block storage, mapping datacenters and racks onto regions and zones, and configuring the global VPC and backups. Machine specs and Local SSD performance change; check current GCP documentation before sizing.
 
 ---
 
 ## 1. Storage: Local SSD vs. Persistent Disk / Hyperdisk
 
-| | Local SSD (NVMe, 375 GB devices) | Persistent Disk (`pd-ssd`, `pd-balanced`) / Hyperdisk |
+| | Local SSD (NVMe: 375 GiB devices on N2; 3,000 GiB Titanium SSD on Z3) | Persistent Disk (`pd-ssd`, `pd-balanced`) / Hyperdisk |
 | :--- | :--- | :--- |
 | Latency | Lowest, physically attached | Network-attached, higher latency |
-| Capacity | Fixed number of 375 GB devices per machine type | Sized and (for Hyperdisk) performance-provisioned per volume |
+| Capacity | Fixed number of devices per machine type | Sized and (for Hyperdisk) performance-provisioned per volume |
 | Durability | **Ephemeral.** Data is lost when the VM stops or is deleted (live migration preserves it). Recovery is by re-streaming from replicas. | Persists independently of the VM; can be reattached |
 | Multi-device | Several devices are usually striped (RAID0) into one volume | Single volume |
 
 ### Example machine types
 
-| Machine type | vCPU | RAM | Storage |
-| :--- | :--- | :--- | :--- |
-| `n2-standard-16` | 16 | 64 GB | 4 × 375 GB Local SSD (1.5 TB RAID0) |
-| `n2-highmem-16` | 16 | 128 GB | 4 × 375 GB Local SSD |
-| `c2-standard-16` | 16 | 64 GB | Local SSD; high per-core clock speed |
-| `n2-standard-16` | 16 | 64 GB | Hyperdisk Balanced or `pd-ssd`, e.g. 2 TB |
+| Machine type | vCPU | RAM | Storage | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| `z3-highmem-8-highlssd` | 8 | 64 GB | 1 × 3,000 GiB Titanium SSD (750,000 read IOPS) | Storage-optimized; Google's machine for this workload |
+| `n2-standard-16` | 16 | 64 GB | 4 × 375 GiB Local SSD (1.5 TiB RAID0) | Older generation; N2 needs 24+ vCPUs for full Local SSD IOPS |
+| `n2-highmem-16` | 16 | 128 GB | 4 × 375 GiB Local SSD | More page cache |
+| `n4-standard-16` | 16 | 64 GB | Hyperdisk Balanced only (up to 80,000 IOPS and 1,200 MiB/s per VM) | Newest general purpose; **no Local SSD** |
 
 Local SSD performance scales with the number of devices attached; see GCP's Local SSD performance table for current figures.
+
+> [!WARNING]
+> **N4 (and N4A, N4D) doesn't support Local SSD or Persistent Disk**, only Hyperdisk. It's a network-storage choice, not a newer N2 with Local SSD. Its per-VM Hyperdisk limit (30,000 IOPS at 8 vCPUs) usually decides the node count for read-heavy workloads; [capacity planning](../05_cluster_deployment_and_config/05_capacity_planning.md#11-machine-profiles-and-their-sources) compares it with Z3 and N2, with rough cost. Use Hyperdisk Balanced, not Hyperdisk Balanced High Availability: Cassandra already replicates across zones.
+
+> [!WARNING]
+> Google warns that Local SSD on **C4, C4A, C4D and C4N** `-lssd` machines "might not recover all writes that completed before a power loss event." Cassandra assumes a synced commit log survives, so after a host power loss on these machines, run a full repair of the node's ranges or replace it. Z3 and Z4D aren't covered by that warning.
 
 ---
 

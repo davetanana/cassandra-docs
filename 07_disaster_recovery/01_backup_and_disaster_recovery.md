@@ -1,5 +1,8 @@
 # Backup, Restoration & Disaster Recovery Runbook
 
+> [!CAUTION]
+> Commands on this page can change or delete data and affect running clusters. Try them on a test or staging cluster first, and read the [disclaimer](../README.md#disclaimer). The guide is provided "as is", without warranty.
+
 This runbook covers recovery from hardware failure, accidental data changes, and full cluster loss in Apache Cassandra 5.0. Every command and flag below exists in the 5.0 code base. Rehearse each procedure on a non-production cluster before you need it.
 
 ---

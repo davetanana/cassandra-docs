@@ -1,12 +1,15 @@
 # Azure Deployment Guide
 
+> [!CAUTION]
+> Commands on this page can change or delete data and affect running clusters. Try them on a test or staging cluster first, and read the [disclaimer](../README.md#disclaimer). The guide is provided "as is", without warranty.
+
 Running Apache Cassandra 5.0 on Microsoft Azure means choosing between local NVMe and managed disks, enabling Accelerated Networking, mapping datacenters and racks onto regions and Availability Zones, and configuring backups. VM specs change; check current Azure documentation before sizing.
 
 ---
 
 ## 1. VM Selection: Local NVMe vs. Managed Disks
 
-| | Lsv3 / Lasv3 (local NVMe) | Dsv5 / Esv5 / Ebdsv5 + Premium SSD v2 or Ultra Disk |
+| | Lsv4 / Lsv3 / Lasv3 (local NVMe) | Dsv6 / Esv5 / Ebdsv5 + Premium SSD v2 or Ultra Disk |
 | :--- | :--- | :--- |
 | Latency | Lowest, physically attached | Network-attached, higher latency |
 | Durability | **Ephemeral.** Local NVMe data is lost on deallocation, resize or host failure. Recovery is by re-streaming from replicas. | Persists; can be attached to a replacement VM |
@@ -16,10 +19,13 @@ Running Apache Cassandra 5.0 on Microsoft Azure means choosing between local NVM
 
 | VM size | vCPU | RAM | Storage |
 | :--- | :--- | :--- | :--- |
+| `Standard_L8s_v4` | 8 | 64 GiB | 4 × 480 GB local NVMe (550,000 read IOPS; stripe them, or list each in `data_file_directories`) |
 | `Standard_L8s_v3` | 8 | 64 GiB | 1 × 1.92 TB local NVMe |
 | `Standard_L16s_v3` | 16 | 128 GiB | 2 × 1.92 TB local NVMe (stripe with RAID0, or list both in `data_file_directories`) |
+| `Standard_D8s_v6` | 8 | 32 GiB | No local disk; Premium SSD v2 up to 16,667 IOPS and 496 MB/s per VM (uncached) |
 | `Standard_E16bds_v5` | 16 | 128 GiB | Premium SSD v2, provisioned IOPS/throughput |
-| `Standard_D16ds_v5` | 16 | 64 GiB | Premium SSD v2 or Ultra Disk |
+
+Lsv4 is the newer generation of Lsv3 at the same list price. Dsv6 is the newest general-purpose series. Its per-VM disk limit, not the disk's own limit, caps IOPS, so read-heavy workloads need more Dsv6 nodes than L-series nodes. [Capacity planning](../05_cluster_deployment_and_config/05_capacity_planning.md#11-machine-profiles-and-their-sources) compares them, with rough cost. For the 99.9% single-VM SLA, every OS and data disk must be Premium SSD, Premium SSD v2 or Ultra Disk.
 
 On L-series VMs, the NVMe devices are raw. Partition, format and mount them yourself (at every start after deallocation), and refer to them by stable identifiers, not device order.
 
