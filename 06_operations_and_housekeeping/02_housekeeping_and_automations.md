@@ -11,11 +11,11 @@ This guide covers repair scheduling, snapshot and backup automation, log retenti
 ```mermaid
 graph TD
     subgraph HousekeepingRules ["The 5 Rules of Housekeeping"]
-        R1["1. Repair every table within gc_grace_seconds"]
-        R2["2. Give every snapshot an expiry"]
-        R3["3. Restart one node at a time: drain -> stop -> start -> wait for UN"]
-        R4["4. Keep log and commit log growth bounded"]
-        R5["5. Alert on disk, dropped messages, pending compactions and repair age"]
+        R1["Rule 1: Repair every table within gc_grace_seconds"]
+        R2["Rule 2: Give every snapshot an expiry"]
+        R3["Rule 3: Restart one node at a time: drain -> stop -> start -> wait for UN"]
+        R4["Rule 4: Keep log and commit log growth bounded"]
+        R5["Rule 5: Alert on disk, dropped messages, pending compactions and repair age"]
     end
 ```
 
@@ -27,6 +27,21 @@ graph TD
 A `DELETE` (or an expired TTL) writes a **tombstone**. Compaction may purge a tombstone once it is older than the table's `gc_grace_seconds` (default 864,000 s = 10 days).
 * If a replica missed the delete (it was down, or dropped the mutation) and the other replicas purge their tombstone before a repair reaches it, that replica still holds the old data and no longer sees anything that deletes it.
 * Reads and repairs then copy the old data back to the other replicas: **the deleted data comes back.**
+
+```mermaid
+sequenceDiagram
+    participant A as Replica A
+    participant B as Replica B
+    participant C as Replica C
+    Note over C: Down longer than max_hint_window, so it gets no hint
+    Note over A,B: Day 0: DELETE. A and B write a tombstone
+    Note over C: Still holds the old value
+    Note over A,B: Day 10: gc_grace_seconds has passed. Compaction purges the tombstones
+    Note over A,C: Day 11: a read or a repair compares the replicas
+    C->>A: old value (nothing says it was deleted)
+    C->>B: old value
+    Note over A,C: The deleted row is back. A repair before day 10 would have copied the tombstone to C
+```
 
 **Rule:** every table must be fully repaired more often than its `gc_grace_seconds`. With the 10-day default, aim to complete a repair cycle at least every 7 days, leaving margin for failures.
 

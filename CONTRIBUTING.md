@@ -33,8 +33,16 @@ Then run the same checks CI runs:
 
 ```bash
 python3 tools/check_links.py
+python3 tools/check_diagrams.py              # add --render if you have Docker (CI does)
 python3 tools/check_docs.py ../cassandra
 python3 tools/build_ai_bundle.py --check     # if it fails, run it without --check and commit llms.txt
+```
+
+To preview the guide as a website (optional; CI builds it on every pull request and fails on broken links or anchors):
+
+```bash
+python3 -m pip install -r tools/site-requirements.txt
+python3 tools/build_site.py && mkdocs serve -f build/site/mkdocs.yml    # then open http://127.0.0.1:8000
 ```
 
 If you changed anything under `test_env/`, also run the shell checks. `shellcheck` is optional locally because CI runs it, but it saves a round trip:
@@ -43,6 +51,8 @@ If you changed anything under `test_env/`, also run the shell checks. `shellchec
 for f in test_env/scripts/*.sh test_env/scenarios/*.sh; do bash -n "$f"; done
 shellcheck -S error test_env/scripts/*.sh test_env/scenarios/*.sh
 ```
+
+To add an example query with its output, you don't need to write a test: mark it as described in [test_env/AGENTS.md](test_env/AGENTS.md#d-add-a-check-or-a-scenario) and scenario 14 checks it.
 
 If you changed a testable claim, run its scenario as well. The scenario table in [test_env/README.md](test_env/README.md) shows which scenarios cover which pages. You need Docker with 6–9 GB of memory.
 

@@ -56,8 +56,14 @@ For each FAIL: open `results/<ts>/<scenario>.log`, reproduce by hand, then class
     - `# CLAIMS:` (plain-English list)
     - `# DIRTIES: yes` if it changes topology or config
     - `# MANAGES_CLUSTER: yes` if it starts or stops the cluster itself
-  - Use the helpers in `scripts/lib.sh`: `cq`, `cq_val`, `nt`, `wait_un`, `wait_healthy`, `table_dir`, `set_yaml`, `make_test_table`, `count_value`, `check_*`.
+  - Use the helpers in `scripts/lib.sh`: `cq`, `cq_val`, `nt`, `wait_un`, `wait_healthy`, `table_dir`, `set_yaml`, `make_test_table`, `count_value`, `doc_block`, `doc_result`, `check_doc_examples`, `check_*`.
   - Run the commands **exactly as the doc shows them** where possible (same flags, same order). The point is to test the doc, not an idealized version of it.
+  - Better still, read them from the page: put `<!-- test: NAME -->` on the line before a fenced code block, and use `doc_block <page> NAME` in the scenario (see scenarios 12 and 13). Then the page and the test can't drift apart. Don't rename a marker without updating its scenario.
+- **An example query with its output** (no scenario code needed): put the query in a fenced block after `<!-- test: q:NAME -->`, and the output `cqlsh` prints in a second fenced block (`text`) right after it. Scenario 14 finds every such marker in every page, runs the query on the quickstart node with the `examples` sample data, and compares the output. Leading and trailing blank lines, trailing spaces and the `<stdin>:N:` error prefix are ignored; everything else must match.
+  - `sh:NAME` does the same for a bash block run on the host (the container is `cass-quickstart`).
+  - Examples that need the 3-node cluster (for example `docker exec cass1 ...`) go in a page with the line `<!-- test-env: cluster -->`. Scenario 15 runs those pages on the cluster from `test_env/`, and scenario 14 skips them.
+  - `run:NAME` only checks that the block runs without `Error` or `Exception`. Use it when the output changes from run to run (times, UUIDs, versions, `COPY` row order), and label any output you show as illustrative.
+  - Write the expected output by running the query, never by hand. Make outputs deterministic: fixed `USING TIMESTAMP`, a `WHERE` that fixes the row set, and no `now()` in compared examples.
   - Create your own keyspace. Don't depend on other scenarios.
   - Bash must run on macOS `/bin/bash` 3.2: no associative arrays, no `mapfile`, no `${var,,}`.
 - Add the scenario to the table in `README.md` and remove it from the "Not yet automated" list if it covers something there.
@@ -78,6 +84,13 @@ For each FAIL: open `results/<ts>/<scenario>.log`, reproduce by hand, then class
   - `clearsnapshot --older-than` requires `--all`
   - without the JVM flag, `getautorepairconfig` fails with "Server is not initialized yet"
   - `getautorepairconfig` hides a repair type's settings until that type is enabled
+  - a query sent right after `CREATE INDEX ... USING 'sai'` fails with `INDEX_NOT_AVAILABLE`: the index builds in the background (caught by scenario 12)
+- **Behavior found while writing the scenario 14 examples** (each is now a compared example):
+  - a timestamp string without a zone is parsed in the coordinator's time zone, not UTC
+  - `floor(ts, 1w)` without a start argument gives weeks starting on Thursday (the epoch's weekday)
+  - `avg()` and `collection_avg()` of an integer column are truncated to an integer
+  - cqlsh in batch mode (`-e`, `-f`, piped input) keeps going after a failed statement and exits 2 at the end
+  - `cast()` of a bare constant in the select list is refused ("Cannot infer type"); use a type hint such as `(double)2`
 
 ## Files
 
@@ -87,7 +100,7 @@ For each FAIL: open `results/<ts>/<scenario>.log`, reproduce by hand, then class
 | `.env.example` | image pin, heap, `CASSANDRA_SRC` |
 | `scripts/lib.sh` | helpers and result recording |
 | `scripts/up.sh`, `down.sh`, `run.sh` | lifecycle and runner |
-| `scenarios/NN_*.sh` | one file per area of the guide |
+| `scenarios/NN_*.sh` | one file per area of the guide; `14_query_examples.sh` runs the `q:`/`sh:`/`run:` examples in every page on the quickstart node, `15_cluster_tutorials.sh` those in pages marked `<!-- test-env: cluster -->` on the 3-node cluster |
 | `config/` | yaml fragments mounted read-only at `/test_config` (use `apply_yaml`) |
 | `shared/` | mounted at `/shared` in every node, for staging |
 | `results/` | run outputs; `LATEST.md` is the latest **full** run (committed per release); `LAST_PARTIAL.md` is the latest run of selected scenarios |

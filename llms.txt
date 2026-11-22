@@ -4,6 +4,12 @@
 
 Read [AI_USAGE.md](AI_USAGE.md) first: it gives the rules for answering from this guide (version scope, the two config templates, irreversible operations, and how to cite). Names and defaults were verified against the Cassandra 5.0 source; behavior was validated on a live cluster ([results](test_env/results/LATEST.md)).
 
+## Phase 0: Getting Started
+
+- [Quickstart: Your First 15 Minutes with Cassandra 5.0](00_getting_started/01_quickstart.md): start a single 5.0 node in Docker, create a keyspace and a query-first table, see why a non-key query is refused, add an SAI index (and wait for it to build), connect from Python, and where to read next.
+- [Tutorial: Model a Chat App, from Questions to Tables](00_getting_started/02_tutorial_data_modeling.md): *tutorial for developers.* Model a chat app from its questions to its tables: month-bucketed messages with `timeuuid`, an inbox, unread counts, a logged batch to send a message, and how to prove with `TRACING ON` that an activity-sorted inbox fills with tombstones. Every query is tested.
+- [Tutorial: Run a Three-Node Cluster and Practice a Failure](00_getting_started/03_tutorial_operations.md): *tutorial for operators.* On a local 3-node cluster: read `nodetool status`, find replicas, stop a node and see `QUORUM` work and `ALL` fail, watch hints replay, repair, then snapshot, `TRUNCATE` by mistake and restore with `nodetool import` on every node. Every command is tested.
+
 ## Phase 1: Architecture & Mental Model
 
 - [The Developer Mental Model: RDBMS vs. Cassandra](01_architecture_and_mental_model/01_mental_model.md): LSM write and read paths (SkipList vs Trie memtables, BIG vs BTI SSTables), the token ring (`num_tokens: 16`, Murmur3), RDBMS vs Cassandra concepts, and how `cassandra.yaml` differs from `cassandra_latest.yaml`.
@@ -18,8 +24,9 @@ Read [AI_USAGE.md](AI_USAGE.md) first: it gives the rules for answering from thi
 
 - [Performant Writes: Maximizing Throughput & Minimizing Overhead](03_application_development/01_performant_writes.md): async pipelining with backpressure, single-partition vs multi-partition batches, `null` vs unset, upsert and row-marker semantics, and TTLs with TWCS.
 - [Performant Reads: Latency Minimization & Query Optimization](03_application_development/02_performant_reads.md): single-partition reads, clustering slices, replacing `IN` with parallel async reads, paging vs token-range scans, and SAI instead of `ALLOW FILTERING`.
-- [Client Driver Best Practices & Architecture](03_application_development/03_client_drivers.md): the singleton `CqlSession`, multiplexing (32,768 stream IDs; driver default 1,024 requests per connection), `DefaultLoadBalancingPolicy` token-aware DC-local routing, speculative execution, idempotence, and timeouts, auth and TLS settings.
+- [Client Driver Best Practices & Architecture](03_application_development/03_client_drivers.md): the singleton `CqlSession`, multiplexing (32,768 stream IDs; driver default 1,024 requests per connection), `DefaultLoadBalancingPolicy` token-aware DC-local routing, speculative execution, idempotence, and timeouts, auth and TLS settings. Then a defaults comparison of the Java, Python, Go and Node.js drivers (gocql defaults to `QUORUM` and DC-unaware round-robin) with tested Go and Node.js examples.
 - [Consistency Levels, Lightweight Transactions & Data Masking](03_application_development/04_consistency_and_transactions.md): consistency levels including `EACH_QUORUM` and `SERIAL`/`LOCAL_SERIAL`, clock skew, LWT hazards, Paxos v1 vs v2 (added in 4.1, opt-in via `paxos_variant: v2`, upgrade steps, `paxos_state_purging`), and Dynamic Data Masking (off by default).
+- [Querying with CQL: Clause by Clause, with Results](03_application_development/05_querying_with_cql.md): CQL `SELECT` clause by clause on a sample dataset, with the real `cqlsh` output: primary-key restrictions, `ORDER BY`, `LIMIT` and `PER PARTITION LIMIT`, `GROUP BY`, SAI filtering, vector `ANN OF`, selectors, LWT results, and a table of the errors refused queries return. Every example is tested.
 
 ## Phase 4: Infrastructure & Cloud
 
@@ -27,6 +34,7 @@ Read [AI_USAGE.md](AI_USAGE.md) first: it gives the rules for answering from thi
 - [AWS Deployment Guide](04_infrastructure_and_cloud/02_aws_deployment_guide.md): instance store vs EBS; `Ec2Snitch` vs `Ec2MultiRegionSnitch` vs `GossipingPropertyFileSnitch`; `ec2_naming_scheme` (standard: rack `us-east-1a`); AZ racks; MTU caveats; security groups and ports; S3 backups.
 - [GCP Deployment Guide](04_infrastructure_and_cloud/03_gcp_deployment_guide.md): Local SSD vs Hyperdisk, safe RAID0 via `/dev/disk/by-id`, `GoogleCloudSnitch` (rack = zone letter), global VPC, GCS backups.
 - [Azure Deployment Guide](04_infrastructure_and_cloud/04_azure_deployment_guide.md): Lsv3 NVMe vs managed disks, Accelerated Networking, `AzureSnitch` (`rack-<zone>` or `rack-<faultDomain>`), zones and placement, Blob backups.
+- [Cassandra 5.0 on Kubernetes](04_infrastructure_and_cloud/05_kubernetes.md): when Kubernetes fits, why to use an operator, a minimal cass-operator `CassandraDatacenter` for 5.0 (racks pinned to zones), what the operator does by default (one pod per worker, PodDisruptionBudget, drain on stop), and the Cassandra rules that still apply (storage, memory limits, repair, backups, client access).
 
 ## Phase 5: Configure, Secure, Deploy & Upgrade
 
@@ -54,8 +62,10 @@ Read [AI_USAGE.md](AI_USAGE.md) first: it gives the rules for answering from thi
 
 ## Phase 9: Reference
 
-- [Tools Reference: cqlsh, SSTable Tools, Bulk Loading, Logs & Stress](09_reference/03_tools_reference.md): cqlsh (including `COPY`), sstableloader, the SSTable tools (including `sstablepartitions`), fqltool, auditlogviewer, and cassandra-stress.
+- [Tools Reference: SSTable Tools, Bulk Loading, Logs & Stress](09_reference/03_tools_reference.md): sstableloader, the SSTable tools (including `sstablepartitions`), fqltool, auditlogviewer, and cassandra-stress.
 - [CQL Quick Reference (Cassandra 5.0, CQL 3.4.7)](09_reference/04_cql_quick_reference.md): the CQL statements, table option defaults, types, functions (including the 5.0 math, collection, vector and masking functions), and permissions, all checked against the 5.0 grammar.
+- [CQL Functions Reference (Cassandra 5.0)](09_reference/05_cql_functions.md): every built-in CQL function (aggregates, time, conversion, write metadata, math, collection, vector, masking) with syntax, argument and return types, and a tested example with its output, plus the pre-5.0 names.
+- [cqlsh: The CQL Shell (Cassandra 5.0)](09_reference/06_cqlsh.md): running cqlsh, interactive and scripted use (batch-mode exit codes), output formats, every shell command, reading a trace, `cqlshrc` and credentials, and `COPY` with all its options.
 
 ## Optional
 

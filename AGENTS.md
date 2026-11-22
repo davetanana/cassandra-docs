@@ -8,9 +8,9 @@ The **Field Guide for Apache Cassandra® 5.0** is independent, Apache-2.0 licens
 
 | Path | Contents | Edit by hand? |
 | :--- | :--- | :--- |
-| `01_…/` to `08_…/` | Hand-written guide pages, in lifecycle order | Yes |
+| `00_…/` to `08_…/` | Hand-written guide pages, in lifecycle order (`00_getting_started/` is the quickstart) | Yes |
 | `09_reference/01_cassandra_yaml_reference.md`, `02_nodetool_reference.md` | Generated from a Cassandra source checkout | **No.** Regenerate them with `tools/` |
-| `09_reference/03_…`, `04_…` | Hand-written reference pages | Yes |
+| `09_reference/03_…` to `06_…` | Hand-written reference pages (tools, CQL, CQL functions, cqlsh) | Yes |
 | `README.md` | Table of contents, version scope, role navigation. The TOC bullets also feed `llms.txt` | Yes |
 | `AI_USAGE.md`, `llms.txt` | How to use the guide with AI assistants, and the generated page index | `AI_USAGE.md`: yes. `llms.txt`: no, it is generated |
 | `tools/` | Python 3 scripts (standard library only): reference generators, drift checker, link checker, AI bundle builder | Yes |

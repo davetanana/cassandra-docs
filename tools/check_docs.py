@@ -53,7 +53,7 @@ def java_literals(root):
 
 def iter_md(docs):
     for dirpath, dirnames, files in os.walk(docs):
-        dirnames[:] = [d for d in dirnames if not d.startswith(".") and d not in ("tools", "dist", "results")]
+        dirnames[:] = [d for d in dirnames if not d.startswith(".") and d not in ("tools", "dist", "build", "results")]
         for fn in sorted(files):
             if fn.endswith(".md"):
                 yield os.path.join(dirpath, fn)

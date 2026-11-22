@@ -34,7 +34,7 @@ done
 tag() { sed -n '1,15p' "$1" | sed -n "s/^# $2:[[:space:]]*//p" | head -1; }
 running() { docker inspect -f '{{.State.Running}}' cass1 2>/dev/null | grep -q true; }
 
-dirty=0
+dirty=0; image=""; version=""
 for f in "${scenarios[@]}"; do
   name=$(basename "${f%.sh}")
   if [ "$(tag "$f" MANAGES_CLUSTER)" != "yes" ]; then
@@ -49,11 +49,25 @@ for f in "${scenarios[@]}"; do
   [ $rc -ne 0 ] && printf '%s\tFAIL\t%s\t%s\t%s\n' "$name" "$(tag "$f" DOC)" "scenario exited with code $rc" "see $name.log" >> "$RESULTS_FILE"
   log "=== $name finished in $(( $(date +%s) - start ))s (rc=$rc)"
   [ "$(tag "$f" DIRTIES)" = "yes" ] && dirty=1
+  # Record the version while a node is up: later scenarios (12, 13) stop the 3-node cluster.
+  if running; then
+    image=$(docker inspect -f '{{.Config.Image}}' cass1 2>/dev/null)
+    version=$(docker exec cass1 nodetool version 2>/dev/null | awk '{print $2}')
+  fi
 done
 
 # ---- summary (capture the version before any teardown) ----
-image=$(docker inspect -f '{{.Config.Image}}' cass1 2>/dev/null); image=${image:-$CASSANDRA_IMAGE}
-version=$(docker exec cass1 nodetool version 2>/dev/null | awk '{print $2}')
+if running; then
+  image=$(docker inspect -f '{{.Config.Image}}' cass1 2>/dev/null)
+  version=$(docker exec cass1 nodetool version 2>/dev/null | awk '{print $2}')
+fi
+image=${image:-$CASSANDRA_IMAGE}
+# Only standalone-container scenarios ran (12, 13, 14): take the version the official image declares.
+if [ -z "$version" ]; then
+  version=$(docker image inspect "$image" --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null |
+            sed -n 's/^CASSANDRA_VERSION=//p')
+  [ -n "$version" ] && version="$version (from the image's CASSANDRA_VERSION)"
+fi
 [ "$TEARDOWN" = 1 ] && cluster_down
 {
   echo "# Validation results ($TS)"

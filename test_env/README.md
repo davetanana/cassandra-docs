@@ -24,6 +24,7 @@ Run a subset by number prefix: `scripts/run.sh 03 05`. Add `--down` to tear down
 - At least **6 GB** of Docker memory for 3 nodes, or **9 GB** for scenarios 09 and 10, which add a 4th node.
 - Linux/amd64 or arm64 (the official `cassandra` image is multi-arch).
 - `python3` for scenario 00, and optionally `shellcheck`.
+- Network access for scenarios 12 and 13, which pull `python`, `golang` and `node` images and install the drivers from PyPI, the Go module proxy and npm.
 
 ## Topology
 
@@ -54,6 +55,10 @@ Every node uses `GossipingPropertyFileSnitch`, `num_tokens: 16`, and otherwise t
 | 09 | `node_replacement` | `replace_address_first_boot` at a new IP: tokens, rack and data taken over; old IP removed; flag harmless on restart | **yes** |
 | 10 | `add_datacenter` | `auto_bootstrap: false`, system keyspace ALTERs, `nodetool rebuild dc1`, LOCAL_ONE reads in dc2 | **yes** |
 | 11 | `auto_repair` | The "not enabled" message without the JVM flag; with it, the documented `nodetool` auto-repair commands and table options work | **yes** (restarts with a JVM flag) |
+| 12 | `quickstart` | The quickstart page's own code blocks, run as written on a standalone node: startup with only `MAX_HEAP_SIZE`, `datacenter1`, schema and partition queries, the refused non-key query and its error text, the SAI build check, and the Python example | **yes** (stops the 3-node cluster; uses its own `cass-quickstart` container) |
+| 13 | `client_drivers` | The Go (gocql v2) and Node.js examples in the drivers page compile and run as written; Node.js refuses to connect without `localDataCenter` | **yes** (same standalone container as 12) |
+| 14 | `query_examples` | Every tested example in the querying, CQL functions and cqlsh pages, the data-modeling tutorial (and any other page with `q:`, `sh:` or `run:` markers) prints exactly the output the page shows, including error text; cqlsh exit codes and scripting recipes | **yes** (same standalone container as 12) |
+| 15 | `cluster_tutorials` | The operations tutorial (and any page marked `<!-- test-env: cluster -->`) runs as written on the 3-node cluster: node down, `QUORUM` vs `ALL`, hints, repair, snapshot, `TRUNCATE`, import restore | **yes** |
 
 The runner resets the cluster (`down -v` then `up`) after any scenario that changes it, so scenarios never depend on each other.
 
@@ -133,3 +138,4 @@ These procedures are documented but not yet tested here. Contributions welcome:
 - the housekeeping scripts run verbatim: repair timer, disk watchdog, backup script (scenario 07 covers only the upload pattern)
 - UCS migration, and switching between compaction strategies
 - the troubleshooting playbook's log messages (inducing timeouts, tombstone failures, schema disagreement)
+- the Kubernetes page: a cass-operator install on a local `kind` cluster

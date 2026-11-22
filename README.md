@@ -2,11 +2,15 @@
 
 > **Independent documentation.** This is a community guide to [Apache Cassandra®](https://cassandra.apache.org/). It is not affiliated with, endorsed by, or sponsored by [The Apache Software Foundation](https://www.apache.org/). For the official documentation, see [cassandra.apache.org/doc](https://cassandra.apache.org/doc/5.0/).
 
-This documentation set follows the order in which an engineering team actually meets Cassandra: evaluation and data modeling, application development, infrastructure sizing, cluster deployment and security, day-to-day operations, upgrades, and disaster recovery. Final sections cover building and testing Apache Cassandra from source, and generated reference pages.
+Runbooks and guidance for the parts of Cassandra 5.0 that teams find hardest in practice: data modeling, driver configuration, upgrades, repair, troubleshooting and restores. The pages follow the order in which a team meets Cassandra, from a first local node to disaster recovery. **New to Cassandra? Start with the [Quickstart](00_getting_started/01_quickstart.md).**
 
-THIS IS COMPLETELY AI GENERATED as a MEANS to help engineering teams actually use the product, and be a reasonable guide that addresses anything official docs may miss.
+**How this guide is checked:**
+* **Names and defaults** (every `cassandra.yaml` key and `nodetool` command and flag) are checked in CI against the Cassandra source on the `cassandra-5.0` branch. The two reference pages are generated from it.
+* **Behavior** is tested on a live 3–5 node cluster: [`test_env/`](test_env/README.md) runs the quickstart, the driver examples, the runbooks (node replacement, restores, adding a datacenter, rolling restarts, auto-repair) and about 100 CQL, `nodetool` and default-value claims. See the [latest results](test_env/results/LATEST.md).
+* **Driver defaults** are checked against each driver's own source.
 
-If you want the backstory, I managed a bunch of clusters and thought to myself I bet we could get a good docs if I pointed AI at the code. I will try that this weekend...
+> [!NOTE]
+> **About AI assistance.** The pages were drafted with AI tools working from the Cassandra source code, then checked as described above by a maintainer who has run production Cassandra clusters. A claim the checks can't cover is labeled. If you find something wrong, please open an issue in this repository; see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 > **Version scope**: These guides target Apache Cassandra **5.0.x**. Names and defaults were verified against the upstream `cassandra-5.0` branch at 5.0.10 (commit `47227d98bf`); behavior was validated on a live **5.0.9** cluster (the newest Docker Hub image at the time) with [`test_env/`](test_env/README.md). Supported runtimes are **Java 11 and Java 17** (Java 17 fully supported since 5.0.5, CASSANDRA-20681). Java 21 is not supported.
 >
@@ -24,6 +28,7 @@ These pages complement, and do not replace, the official AsciiDoc reference in [
 
 ```mermaid
 graph TD
+    Phase0["Phase 0: Quickstart & Tutorials"] --> Phase1
     Phase1["Phase 1: Mental Model & Anti-Patterns"] --> Phase2
     Phase2["Phase 2: Schema Modeling, SAI & Vector Search"] --> Phase3
     Phase3["Phase 3: Application Development"] --> Phase4
@@ -32,12 +37,19 @@ graph TD
     Phase6["Phase 6: Day-2 Operations, Monitoring & Compaction"] --> Phase7
     Phase7["Phase 7: Disaster Recovery"]
     Phase8["Phase 8: Developing Cassandra Itself"]
-    Phase9["Phase 9: Reference (yaml, nodetool, tools, CQL)"]
+    Phase9["Phase 9: Reference (yaml, nodetool, tools, CQL, functions, cqlsh)"]
 ```
 
 ---
 
 ## Table of Contents
+
+### Phase 0: Getting Started
+> **Audience**: Anyone new to Cassandra. **Goal**: A running node, a well-designed table and a working application in about 15 minutes, then two hands-on tutorials: one for developers, one for operators.
+
+* **[01_quickstart.md](00_getting_started/01_quickstart.md)**: start a single 5.0 node in Docker, create a keyspace and a query-first table, see why a non-key query is refused, add an SAI index (and wait for it to build), connect from Python, and where to read next.
+* **[02_tutorial_data_modeling.md](00_getting_started/02_tutorial_data_modeling.md)**: *tutorial for developers.* Model a chat app from its questions to its tables: month-bucketed messages with `timeuuid`, an inbox, unread counts, a logged batch to send a message, and how to prove with `TRACING ON` that an activity-sorted inbox fills with tombstones. Every query is tested.
+* **[03_tutorial_operations.md](00_getting_started/03_tutorial_operations.md)**: *tutorial for operators.* On a local 3-node cluster: read `nodetool status`, find replicas, stop a node and see `QUORUM` work and `ALL` fail, watch hints replay, repair, then snapshot, `TRUNCATE` by mistake and restore with `nodetool import` on every node. Every command is tested.
 
 ### Phase 1: Architecture & Mental Model
 > **Audience**: Software engineers, architects. **Goal**: Unlearn RDBMS habits, and understand why writes are cheap appends while reads may merge several SSTables.
@@ -56,8 +68,9 @@ graph TD
 
 * **[01_performant_writes.md](03_application_development/01_performant_writes.md)**: async pipelining with backpressure, single-partition vs multi-partition batches, `null` vs unset, upsert and row-marker semantics, and TTLs with TWCS.
 * **[02_performant_reads.md](03_application_development/02_performant_reads.md)**: single-partition reads, clustering slices, replacing `IN` with parallel async reads, paging vs token-range scans, and SAI instead of `ALLOW FILTERING`.
-* **[03_client_drivers.md](03_application_development/03_client_drivers.md)**: the singleton `CqlSession`, multiplexing (32,768 stream IDs; driver default 1,024 requests per connection), `DefaultLoadBalancingPolicy` token-aware DC-local routing, speculative execution, idempotence, and timeouts, auth and TLS settings.
+* **[03_client_drivers.md](03_application_development/03_client_drivers.md)**: the singleton `CqlSession`, multiplexing (32,768 stream IDs; driver default 1,024 requests per connection), `DefaultLoadBalancingPolicy` token-aware DC-local routing, speculative execution, idempotence, and timeouts, auth and TLS settings. Then a defaults comparison of the Java, Python, Go and Node.js drivers (gocql defaults to `QUORUM` and DC-unaware round-robin) with tested Go and Node.js examples.
 * **[04_consistency_and_transactions.md](03_application_development/04_consistency_and_transactions.md)**: consistency levels including `EACH_QUORUM` and `SERIAL`/`LOCAL_SERIAL`, clock skew, LWT hazards, Paxos v1 vs v2 (added in 4.1, opt-in via `paxos_variant: v2`, upgrade steps, `paxos_state_purging`), and Dynamic Data Masking (off by default).
+* **[05_querying_with_cql.md](03_application_development/05_querying_with_cql.md)**: CQL `SELECT` clause by clause on a sample dataset, with the real `cqlsh` output: primary-key restrictions, `ORDER BY`, `LIMIT` and `PER PARTITION LIMIT`, `GROUP BY`, SAI filtering, vector `ANN OF`, selectors, LWT results, and a table of the errors refused queries return. Every example is tested.
 
 ### Phase 4: Infrastructure & Cloud
 > **Audience**: Cloud architects, SREs, DevOps.
@@ -66,6 +79,7 @@ graph TD
 * **[02_aws_deployment_guide.md](04_infrastructure_and_cloud/02_aws_deployment_guide.md)**: instance store vs EBS; `Ec2Snitch` vs `Ec2MultiRegionSnitch` vs `GossipingPropertyFileSnitch`; `ec2_naming_scheme` (standard: rack `us-east-1a`); AZ racks; MTU caveats; security groups and ports; S3 backups.
 * **[03_gcp_deployment_guide.md](04_infrastructure_and_cloud/03_gcp_deployment_guide.md)**: Local SSD vs Hyperdisk, safe RAID0 via `/dev/disk/by-id`, `GoogleCloudSnitch` (rack = zone letter), global VPC, GCS backups.
 * **[04_azure_deployment_guide.md](04_infrastructure_and_cloud/04_azure_deployment_guide.md)**: Lsv3 NVMe vs managed disks, Accelerated Networking, `AzureSnitch` (`rack-<zone>` or `rack-<faultDomain>`), zones and placement, Blob backups.
+* **[05_kubernetes.md](04_infrastructure_and_cloud/05_kubernetes.md)**: when Kubernetes fits, why to use an operator, a minimal cass-operator `CassandraDatacenter` for 5.0 (racks pinned to zones), what the operator does by default (one pod per worker, PodDisruptionBudget, drain on stop), and the Cassandra rules that still apply (storage, memory limits, repair, backups, client access).
 
 ### Phase 5: Configure, Secure, Deploy & Upgrade
 > **Audience**: DBAs, SREs.
@@ -100,10 +114,12 @@ graph TD
 
 * **[01_cassandra_yaml_reference.md](09_reference/01_cassandra_yaml_reference.md)**: *generated* from `conf/cassandra.yaml`, `cassandra_latest.yaml` and `Config.java`. Covers every key with its default, its `cassandra_latest` value, deprecated aliases, and hidden keys.
 * **[02_nodetool_reference.md](09_reference/02_nodetool_reference.md)**: *generated* from the nodetool sources. Covers every command, argument and option.
-* **[03_tools_reference.md](09_reference/03_tools_reference.md)**: cqlsh (including `COPY`), sstableloader, the SSTable tools (including `sstablepartitions`), fqltool, auditlogviewer, and cassandra-stress.
+* **[03_tools_reference.md](09_reference/03_tools_reference.md)**: sstableloader, the SSTable tools (including `sstablepartitions`), fqltool, auditlogviewer, and cassandra-stress.
 * **[04_cql_quick_reference.md](09_reference/04_cql_quick_reference.md)**: the CQL statements, table option defaults, types, functions (including the 5.0 math, collection, vector and masking functions), and permissions, all checked against the 5.0 grammar.
+* **[05_cql_functions.md](09_reference/05_cql_functions.md)**: every built-in CQL function (aggregates, time, conversion, write metadata, math, collection, vector, masking) with syntax, argument and return types, and a tested example with its output, plus the pre-5.0 names.
+* **[06_cqlsh.md](09_reference/06_cqlsh.md)**: running cqlsh, interactive and scripted use (batch-mode exit codes), output formats, every shell command, reading a trace, `cqlshrc` and credentials, and `COPY` with all its options.
 
-**Behavioral validation:** [`test_env/`](test_env/README.md) runs the guide's claims and runbooks (restore, node replacement, adding a DC, rolling restart, auto-repair, S3 backup pattern, and about 100 CQL, nodetool and default-value claims) against a 3–5 node Docker cluster. See [`test_env/results/LATEST.md`](test_env/README.md#reading-results) for the latest run.
+**Behavioral validation:** [`test_env/`](test_env/README.md) runs the guide's claims and runbooks (restore, node replacement, adding a DC, rolling restart, auto-repair, S3 backup pattern, every example query on the CQL and cqlsh pages, and about 100 CQL, nodetool and default-value claims) against a 3–5 node Docker cluster. See [`test_env/results/LATEST.md`](test_env/README.md#reading-results) for the latest run.
 
 The generated pages and the drift checker live in [`tools/`](tools/README.md). Re-run them against a Cassandra checkout whenever you move to a new 5.0.x release.
 
@@ -113,10 +129,11 @@ The generated pages and the drift checker live in [`tools/`](tools/README.md). R
 
 | If your role is... | Start here | Then read |
 | :--- | :--- | :--- |
-| **Backend / API developer** | [01_mental_model.md](01_architecture_and_mental_model/01_mental_model.md) | [01_schema_design_patterns.md](02_data_modeling_and_indexing/01_schema_design_patterns.md) → [01_performant_writes.md](03_application_development/01_performant_writes.md) → [03_client_drivers.md](03_application_development/03_client_drivers.md) → [04_consistency_and_transactions.md](03_application_development/04_consistency_and_transactions.md) |
+| **New to Cassandra** | [01_quickstart.md](00_getting_started/01_quickstart.md) | [02_tutorial_data_modeling.md](00_getting_started/02_tutorial_data_modeling.md) →  [01_mental_model.md](01_architecture_and_mental_model/01_mental_model.md) → [02_anti_patterns.md](01_architecture_and_mental_model/02_anti_patterns.md) → [01_schema_design_patterns.md](02_data_modeling_and_indexing/01_schema_design_patterns.md) → [05_querying_with_cql.md](03_application_development/05_querying_with_cql.md) |
+| **Backend / API developer** | [01_mental_model.md](01_architecture_and_mental_model/01_mental_model.md) | [01_schema_design_patterns.md](02_data_modeling_and_indexing/01_schema_design_patterns.md) → [01_performant_writes.md](03_application_development/01_performant_writes.md) → [05_querying_with_cql.md](03_application_development/05_querying_with_cql.md) → [03_client_drivers.md](03_application_development/03_client_drivers.md) → [04_consistency_and_transactions.md](03_application_development/04_consistency_and_transactions.md) |
 | **AI / ML engineer** | [02_indexing_and_vector_search.md](02_data_modeling_and_indexing/02_indexing_and_vector_search.md) | [01_schema_design_patterns.md](02_data_modeling_and_indexing/01_schema_design_patterns.md) → [02_performant_reads.md](03_application_development/02_performant_reads.md) |
-| **Cloud / DevOps engineer** | [01_java_and_jvm_flavors.md](04_infrastructure_and_cloud/01_java_and_jvm_flavors.md) | Cloud guide ([AWS](04_infrastructure_and_cloud/02_aws_deployment_guide.md) / [GCP](04_infrastructure_and_cloud/03_gcp_deployment_guide.md) / [Azure](04_infrastructure_and_cloud/04_azure_deployment_guide.md)) → [01_configuration_and_tuning.md](05_cluster_deployment_and_config/01_configuration_and_tuning.md) → [02_cluster_deployment_runbook.md](05_cluster_deployment_and_config/02_cluster_deployment_runbook.md) → [03_security_hardening.md](05_cluster_deployment_and_config/03_security_hardening.md) |
-| **On-call SRE / DBA** | [05_troubleshooting_playbook.md](06_operations_and_housekeeping/05_troubleshooting_playbook.md) | [01_nodetool_operations_guide.md](06_operations_and_housekeeping/01_nodetool_operations_guide.md) → [02_housekeeping_and_automations.md](06_operations_and_housekeeping/02_housekeeping_and_automations.md) → [03_monitoring_and_observability.md](06_operations_and_housekeeping/03_monitoring_and_observability.md) → [01_backup_and_disaster_recovery.md](07_disaster_recovery/01_backup_and_disaster_recovery.md) |
+| **Cloud / DevOps engineer** | [01_java_and_jvm_flavors.md](04_infrastructure_and_cloud/01_java_and_jvm_flavors.md) | Cloud guide ([AWS](04_infrastructure_and_cloud/02_aws_deployment_guide.md) / [GCP](04_infrastructure_and_cloud/03_gcp_deployment_guide.md) / [Azure](04_infrastructure_and_cloud/04_azure_deployment_guide.md) / [Kubernetes](04_infrastructure_and_cloud/05_kubernetes.md)) → [01_configuration_and_tuning.md](05_cluster_deployment_and_config/01_configuration_and_tuning.md) → [02_cluster_deployment_runbook.md](05_cluster_deployment_and_config/02_cluster_deployment_runbook.md) → [03_security_hardening.md](05_cluster_deployment_and_config/03_security_hardening.md) |
+| **On-call SRE / DBA** | [03_tutorial_operations.md](00_getting_started/03_tutorial_operations.md) | [05_troubleshooting_playbook.md](06_operations_and_housekeeping/05_troubleshooting_playbook.md) →  [01_nodetool_operations_guide.md](06_operations_and_housekeeping/01_nodetool_operations_guide.md) → [02_housekeeping_and_automations.md](06_operations_and_housekeeping/02_housekeeping_and_automations.md) → [03_monitoring_and_observability.md](06_operations_and_housekeeping/03_monitoring_and_observability.md) → [01_backup_and_disaster_recovery.md](07_disaster_recovery/01_backup_and_disaster_recovery.md) |
 | **Upgrading from 4.x** | [04_upgrading_to_5_0.md](05_cluster_deployment_and_config/04_upgrading_to_5_0.md) | [01_mental_model.md](01_architecture_and_mental_model/01_mental_model.md) (template differences) → [04_compaction_strategies.md](06_operations_and_housekeeping/04_compaction_strategies.md) → [04_consistency_and_transactions.md](03_application_development/04_consistency_and_transactions.md) (Paxos v2) |
 | **Cassandra contributor** | [01_building_and_testing_from_source.md](08_developing_cassandra/01_building_and_testing_from_source.md) | [`CONTRIBUTING.md`](https://github.com/apache/cassandra/blob/cassandra-5.0/CONTRIBUTING.md), [`TESTING.md`](https://github.com/apache/cassandra/blob/cassandra-5.0/TESTING.md) |
 
@@ -136,7 +153,7 @@ The rules tell an assistant to stay within 5.0.x, to say which config template a
 
 ## Contributing
 
-Corrections and new runbooks are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first. Every claim must be backed by the Cassandra source or by a check in [`test_env/`](test_env/README.md).
+Corrections and new runbooks are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first, and see [ROADMAP.md](ROADMAP.md) for the known gaps. Every claim must be backed by the Cassandra source or by a check in [`test_env/`](test_env/README.md).
 
 ---
 

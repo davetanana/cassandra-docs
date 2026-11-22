@@ -1,5 +1,7 @@
 # Built AI bundle (tools/build_ai_bundle.py); CI attaches it to releases
 dist/
+# Staged and built site (tools/build_site.py, mkdocs)
+build/
 # Python
 __pycache__/
 *.pyc

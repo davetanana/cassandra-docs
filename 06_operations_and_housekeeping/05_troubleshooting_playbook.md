@@ -13,6 +13,26 @@ The official troubleshooting section teaches techniques: finding the bad node, r
 > ```
 > Virtual tables give the same data over CQL, per node: `system_views.thread_pools`, `sstable_tasks`, `pending_hints`, `streaming`, `repairs`, `max_partition_size`, `tombstones_per_read`, `clients`. See [Monitoring](03_monitoring_and_observability.md).
 
+Then go to the section for what you see:
+
+```mermaid
+flowchart TD
+    A["Something is wrong"] --> B{"nodetool status:<br/>is any node DN?"}
+    B -- yes --> N["§7 Node flapping or DN"]
+    B -- no --> C{"What do clients see?"}
+    C -- "timeouts" --> T["§1 Timeouts<br/>§2 Dropped messages"]
+    C -- "slow reads, tombstone warnings" --> TS["§4 Tombstones<br/>§5 Large partitions"]
+    C -- "connection or auth errors" --> CE["§15 Client connection errors"]
+    C -- "LWT timeouts" --> L["§13 LWT contention"]
+    C -- "SAI query errors" --> S["§14 SAI problems"]
+    C -- "nothing, but a node looks unhealthy" --> D{"Which signal?"}
+    D -- "long GC pauses, OOM" --> G["§3 GC pressure"]
+    D -- "disk filling up" --> DF["§10 Disk full<br/>§11 Compaction backlog<br/>§12 Commitlog or hints"]
+    D -- "several schema versions" --> SD["§6 Schema disagreement"]
+    D -- "repair or streaming stuck" --> R["§8 Streaming<br/>§9 Repair"]
+    D -- "clocks disagree" --> CS["§16 Clock skew"]
+```
+
 Log locations: `$CASSANDRA_LOG_DIR` (`$CASSANDRA_HOME/logs` for tarball installs, `/var/log/cassandra` for packages), in `system.log`, `debug.log` and `gc.log`.
 
 ---
@@ -263,6 +283,8 @@ du -sh <hints_directory>
 ```sql
 SELECT * FROM system_views.pending_hints;
 ```
+`listpendinghints` and `pending_hints` count only hint files that have been closed. The file being written for a peer that just went down doesn't show yet, so check the size of `hints_directory` too (seen in the [operations tutorial](../00_getting_started/03_tutorial_operations.md#5-keep-writing-while-the-node-is-down)).
+
 **Fix:** bring the target node back, or remove it. If a node will be gone for a long time, `nodetool truncatehints <endpoint>` frees the space; you **must** run repair later. Set `max_hints_size_per_host` so one dead peer can't fill the disk.
 
 **Oversized mutations** (logged at the coordinator): `Rejected an oversized mutation (<size>/<max>) for keyspace: <ks>. Top keys are: ...`. The maximum mutation size is half of `commitlog_segment_size` (32MiB by default), unless `max_mutation_size` is set. Fix the writer (huge batches or blobs) rather than raising the limit.
@@ -288,7 +310,7 @@ SELECT * FROM system_views.pending_hints;
 | :--- | :--- | :--- |
 | Query rejected | `... If you want to execute this query despite the performance unpredictability, use ALLOW FILTERING` | The column has no index, or the operator isn't supported for that index or column type. See [Indexing](../02_data_modeling_and_indexing/02_indexing_and_vector_search.md). |
 | Query rejected by operator policy | `Executing this query despite the performance unpredictability with ALLOW FILTERING has been disabled ...` | The `allow_filtering_enabled: false` guardrail is set. Add an index or a query table. |
-| Read fails during index build | `The secondary index '<name>' is not yet available` | Wait for the build. Check `SELECT * FROM system_views.sai_column_indexes` (`is_queryable`, `is_building`). |
+| Read fails during index build | Client: `ReadFailure ... INDEX_NOT_AVAILABLE` (the coordinator found too few replicas with a queryable index). Replica side: `The secondary index '<name>' is not yet available` | Wait for the build. Check `SELECT * FROM system_views.sai_column_indexes` on each node (`is_queryable`, `is_building`). A new index is never usable the instant `CREATE INDEX` returns. |
 | Build failed | `Failed to build index for SSTable ...` / `Failed to complete an index build` (`system.log`) | Fix the cause (disk, corrupt SSTable: try `nodetool verify` or `scrub`), then run `nodetool rebuild_index <ks> <table> <index>`. |
 | Index marked non-queryable | `... All indexes from this table are going to be marked as non-queryable and will need to be rebuilt.` | Run `nodetool rebuild_index` on that node. |
 | Slow queries touching many SSTables | Guardrail `sai_sstable_indexes_per_query_warn_threshold` (32) | Compaction backlog (§11). Restrict the partition key. |

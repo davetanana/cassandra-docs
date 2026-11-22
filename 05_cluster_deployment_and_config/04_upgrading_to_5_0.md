@@ -89,7 +89,22 @@ This setting controls which on-disk and messaging formats the node writes, and t
 | `UPGRADING` | Writes the 5.0 formats (BIG `oa`), but keeps the features that need all nodes on 5.0 turned off until every node runs in this mode. Checking node versions has a small runtime cost. |
 | `NONE` (the default in `cassandra_latest.yaml`) | Assumes every node is on 5.0. All new formats and features are enabled, including TTLs up to **2106-02-07**. |
 
-The procedure:
+The procedure, and where rollback stops being possible:
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    V4: 4.0 or 4.1
+    C4: 5.0 with CASSANDRA_4
+    UP: 5.0 with UPGRADING
+    NONE: 5.0 with NONE
+    [*] --> V4
+    V4 --> C4: rolling upgrade
+    C4 --> V4: binary rollback still possible
+    C4 --> UP: rolling restart (point of no return)
+    UP --> NONE: rolling restart
+    UP --> V4: only by restoring pre-upgrade snapshots
+```
 
 1. Do the rolling upgrade to 5.0 with `storage_compatibility_mode: CASSANDRA_4`, and let it run stably.
 2. Do a rolling restart with `storage_compatibility_mode: UPGRADING`. The new features turn on once every node is in this mode.

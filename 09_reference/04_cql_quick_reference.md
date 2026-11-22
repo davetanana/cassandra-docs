@@ -2,6 +2,8 @@
 
 A practical cheat sheet of the CQL syntax that Cassandra 5.0 accepts. Every statement form below was checked against the 5.0 grammar ([`src/antlr/Parser.g`](https://github.com/apache/cassandra/blob/cassandra-5.0/src/antlr/Parser.g)). Defaults come from the schema code. For the full specification, see the official CQL reference linked in [Sources](#sources). Modeling advice lives in [Schema Design Patterns](../02_data_modeling_and_indexing/01_schema_design_patterns.md) and [Indexing & Vector Search](../02_data_modeling_and_indexing/02_indexing_and_vector_search.md).
 
+For worked examples with their output and the exact errors for refused queries, see [Querying with CQL](../03_application_development/05_querying_with_cql.md). Every function, with arguments, return type and an example, is in the [CQL functions reference](05_cql_functions.md). The shell itself is covered in the [cqlsh reference](06_cqlsh.md).
+
 Conventions: `[optional]`, `a | b` = choose one, `...` = repeatable.
 
 ---
@@ -93,6 +95,24 @@ You cannot change a column's type (`ALTER ... TYPE` is rejected since 3.4.4), ad
 | Collections | `list<T>`, `set<T>`, `map<K,V>`; `frozen<...>` to store the value as a single blob |
 | Tuples and UDTs | `tuple<int, text>`; user-defined types (below) |
 | **Vector (new in 5.0)** | `vector<float, 768>`, which is fixed-dimension. Any element type is allowed, but SAI vector indexes require `float`. |
+
+Sizes and ranges of the scalar types:
+
+| Type | Size and range | Notes |
+| :--- | :--- | :--- |
+| `tinyint`, `smallint`, `int`, `bigint` | Signed integers of 8, 16, 32 and 64 bits | Out-of-range literals are rejected, for example `Unable to make byte from '128'` for a `tinyint` |
+| `varint` | Integer of any size | |
+| `float`, `double` | 32-bit and 64-bit IEEE 754 | Inexact. Don't use them for money. |
+| `decimal` | Decimal of any precision | Exact. Use it for money. |
+| `counter` | Signed 64-bit | Only `+` and `-` updates, in tables where every non-key column is a counter |
+| `text` (`varchar`), `ascii` | UTF-8 and US-ASCII strings | Size is limited in practice by mutation and partition size, not by the type |
+| `blob` | Bytes | Literal `0xCAFE` |
+| `timestamp` | Milliseconds since 1970-01-01 UTC, 64 bits | A string without a zone is read in the coordinator's time zone. `cqlsh` prints it in UTC. |
+| `date` | Days, 32 bits | No time part |
+| `time` | Nanoseconds since midnight, 64 bits | No date part |
+| `duration` | Months, days and nanoseconds | Not allowed in a primary key: `duration type is not supported for PRIMARY KEY column` |
+| `uuid`, `timeuuid` | 128 bits | `timeuuid` is version 1 (time-based) and sorts by its time |
+| `boolean`, `inet` | `true`/`false`; an IPv4 or IPv6 address | |
 
 ```sql
 CREATE TYPE [IF NOT EXISTS] shop.address (street text, city text, zip text);
@@ -191,6 +211,8 @@ Restriction rules in brief:
 ---
 
 ## 6. Built-In Functions
+
+One entry per function, with arguments, return type and a tested example: [CQL functions reference](05_cql_functions.md).
 
 | Group | Functions (5.0 snake_case names; legacy names still work but are deprecated) |
 | :--- | :--- |
