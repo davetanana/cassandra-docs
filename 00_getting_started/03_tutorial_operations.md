@@ -1,5 +1,8 @@
 # Tutorial: Run a Three-Node Cluster and Practice a Failure
 
+> [!CAUTION]
+> Commands on this page can change or delete data and affect running clusters. Try them on a test or staging cluster first, and read the [disclaimer](../README.md#disclaimer). The guide is provided "as is", without warranty.
+
 <!-- test-env: cluster -->
 
 In this tutorial you run a three-node cluster on your laptop, see how data is replicated, stop a node and watch what still works, bring it back, repair, and then recover from a "bad" `TRUNCATE` with snapshots. It takes about 30 minutes. It's the drill every operator should have done once before an incident forces it.

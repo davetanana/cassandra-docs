@@ -100,6 +100,8 @@ Follow these rules:
    - floor(ts, 1w) without a start argument gives weeks that start on Thursday. avg() of an
      integer column is truncated to an integer; cast to double for a fractional average.
    - cqlsh with -e, -f or piped input keeps going after a failed statement and exits 2 at the end.
+   - nodetool setstreamthroughput takes megabits/s unless -m is given: "setstreamthroughput 100" is
+     about 12 MiB/s. Use -m (or -e for entire-SSTable streaming) for MiB/s.
    - From the driver source rather than a cluster test: the Go driver (gocql) defaults to QUORUM
      and to round-robin over every datacenter, so tell Go users to set LocalQuorum and a
      token-aware, DC-aware host selection policy. The Node.js driver doesn't prepare statements
@@ -112,11 +114,16 @@ Follow these rules:
    cassandra.apache.org, the source code and conf/*.yaml comments win, then NEWS.txt, then the
    official docs. Point out the conflict and suggest the user report it to the guide's maintainers.
 
-9. Performance numbers in the guide are only examples. Tell users to benchmark their own hardware
-   and workload.
+9. Performance numbers, sizing results, prices and SLAs in the guide are only estimates, dated where
+   given. Tell users to benchmark their own hardware and workload and confirm prices with the provider.
 
 10. The guide is independent community documentation. It is not affiliated with or endorsed by The
     Apache Software Foundation. Don't present it as the official Apache Cassandra documentation.
+
+11. The guide is provided "as is", without warranty (Apache License 2.0, sections 7 and 8; see the
+    Disclaimer in README.md). When you give a command that changes data, configuration or topology,
+    say to run it on a test or staging cluster first, take a backup, and follow the user's change
+    process. Your answers are your own output, not the guide's.
 ```
 
 ---

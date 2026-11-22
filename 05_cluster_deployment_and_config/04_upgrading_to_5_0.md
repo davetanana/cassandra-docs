@@ -1,5 +1,8 @@
 # Upgrading to Cassandra 5.0
 
+> [!CAUTION]
+> Commands on this page can change or delete data and affect running clusters. Try them on a test or staging cluster first, and read the [disclaimer](../README.md#disclaimer). The guide is provided "as is", without warranty.
+
 This page covers rolling upgrades from **4.0.x / 4.1.x** to 5.0.x, and how to turn on 5.0-only features (BTI, UCS, SAI, trie memtables, Paxos v2) on an existing cluster. The authoritative source is [`NEWS.txt`](https://github.com/apache/cassandra/blob/cassandra-5.0/NEWS.txt) in the Apache Cassandra source. Read its "Upgrading" sections for 5.0 and for **every 5.0.x release up to your target**.
 
 ---

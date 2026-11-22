@@ -1,5 +1,8 @@
 # Indexing & Vector Search in Cassandra 5.0
 
+> [!CAUTION]
+> Commands on this page can change or delete data and affect running clusters. Try them on a test or staging cluster first, and read the [disclaimer](../README.md#disclaimer). The guide is provided "as is", without warranty.
+
 Cassandra 5.0 significantly expands querying with two new features:
 1. **Storage-Attached Indexing (SAI)**: A new secondary index implementation that offers an alternative to legacy secondary indexes (2i).
 2. **Native Vector Search**: Direct support for AI/ML embeddings and Approximate Nearest Neighbor (ANN) search.
@@ -176,7 +179,7 @@ LIMIT 5;
 * `ANN OF` must be the **only** ordering. You cannot combine it with another `ORDER BY` column or use `DESC`.
 * Every column filtered in the `WHERE` clause (other than a full partition-key restriction) must have an SAI index. Clustering-column restrictions that can be served without filtering are also allowed.
 * A vector index supports only `ANN OF`. You cannot run `WHERE embedding = ...`.
-* `CREATE INDEX` on a vector column returns a client warning in 5.0: "SAI ANN indexes on vector columns are experimental and are not recommended for production use", followed by the limits above. The index is still created. Evaluate it under your own load before relying on it ([example](../03_application_development/05_querying_with_cql.md#1-set-up-the-sample-data)).
+* `CREATE INDEX` on a vector column returns a client warning in 5.0: "SAI ANN indexes on vector columns are experimental and are not recommended for production use", followed by the limits above. The index is still created. Evaluate it under your own load before relying on it ([example](../03_application_development/05_querying_with_cql.md#1-set-up-the-sample-data)). A vector index can take more disk than the vectors themselves and makes compaction much slower; [capacity planning](../05_cluster_deployment_and_config/05_capacity_planning.md#sai-and-vector-indexes) has measured figures.
 
 ### The Golden Rule of Vector Search:
 > [!IMPORTANT]

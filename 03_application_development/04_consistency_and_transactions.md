@@ -1,5 +1,8 @@
 # Consistency Levels, Lightweight Transactions & Data Masking
 
+> [!CAUTION]
+> Commands on this page can change or delete data and affect running clusters. Try them on a test or staging cluster first, and read the [disclaimer](../README.md#disclaimer). The guide is provided "as is", without warranty.
+
 Cassandra lets developers choose the consistency level **per query**, trading off latency, availability and consistency. Single-partition compare-and-set is available through lightweight transactions (LWT). Cassandra 5.0 has **no multi-partition ACID transactions**.
 
 ---

@@ -1,5 +1,8 @@
 # Node Configuration, JVM & Operating System Tuning
 
+> [!CAUTION]
+> Commands on this page can change or delete data and affect running clusters. Try them on a test or staging cluster first, and read the [disclaimer](../README.md#disclaimer). The guide is provided "as is", without warranty.
+
 A Cassandra 5.0 node is tuned at three layers:
 
 1. **`cassandra.yaml`**: database engine settings.

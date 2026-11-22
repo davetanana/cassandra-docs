@@ -1,5 +1,8 @@
 # CQL Functions Reference (Cassandra 5.0)
 
+> [!CAUTION]
+> Commands on this page can change or delete data and affect running clusters. Try them on a test or staging cluster first, and read the [disclaimer](../README.md#disclaimer). The guide is provided "as is", without warranty.
+
 Every built-in CQL function in Cassandra 5.0, one entry each, with its syntax, arguments, return type and an example with the output `cqlsh` prints. The function list and the argument and return types come from the 5.0 source ([`cql3/functions/`](https://github.com/apache/cassandra/tree/cassandra-5.0/src/java/org/apache/cassandra/cql3/functions)). The examples are run against Cassandra 5.0 by [`test_env` scenario 14](../test_env/README.md), and their output is compared with what this page shows.
 
 For the statement syntax, see the [CQL quick reference](04_cql_quick_reference.md). For how to use the functions in real queries, see [Querying with CQL](../03_application_development/05_querying_with_cql.md).

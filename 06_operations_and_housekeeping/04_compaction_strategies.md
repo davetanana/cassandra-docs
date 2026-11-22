@@ -1,5 +1,8 @@
 # Compaction Strategies: STCS, LCS, TWCS & UCS
 
+> [!CAUTION]
+> Commands on this page can change or delete data and affect running clusters. Try them on a test or staging cluster first, and read the [disclaimer](../README.md#disclaimer). The guide is provided "as is", without warranty.
+
 Compaction merges SSTables in the background. This is how Cassandra keeps the number of files read per query low, reclaims space from overwrites, and eventually removes tombstones. The strategy is set **per table**, and it is the biggest lever you have over read latency, write amplification and disk headroom.
 
 | Template | Default strategy for new tables |

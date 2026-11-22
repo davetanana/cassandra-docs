@@ -1,5 +1,8 @@
 # Anti-Patterns & Traps: What Kills Cassandra Performance
 
+> [!CAUTION]
+> Commands on this page can change or delete data and affect running clusters. Try them on a test or staging cluster first, and read the [disclaimer](../README.md#disclaimer). The guide is provided "as is", without warranty.
+
 Many Cassandra production problems (high p99 latency, long GC pauses, timeouts, out-of-memory errors) come from how the application models and queries data rather than from the server itself.
 
 Below are the **top 8 anti-patterns** to avoid. Section 9 lists the 5.0 guardrails operators can use to warn on or reject several of them.

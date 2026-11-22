@@ -1,5 +1,8 @@
 # Tools Reference: SSTable Tools, Bulk Loading, Logs & Stress
 
+> [!CAUTION]
+> Commands on this page can change or delete data and affect running clusters. Try them on a test or staging cluster first, and read the [disclaimer](../README.md#disclaimer). The guide is provided "as is", without warranty.
+
 This page covers every command-line tool that ships with Cassandra 5.0 except `nodetool`, which has its own [operations guide](../06_operations_and_housekeeping/01_nodetool_operations_guide.md), and `cqlsh`, which has its own [reference](06_cqlsh.md). Options and defaults were taken from the 5.0 source (see [Sources](#sources)). Run any tool with `-h` / `--help` to see the full list for your build.
 
 | Location | Tools |

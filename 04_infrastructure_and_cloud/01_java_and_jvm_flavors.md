@@ -1,5 +1,8 @@
 # Java & OpenJDK Flavors: Performance, Trade-offs & Garbage Collection
 
+> [!CAUTION]
+> Commands on this page can change or delete data and affect running clusters. Try them on a test or staging cluster first, and read the [disclaimer](../README.md#disclaimer). The guide is provided "as is", without warranty.
+
 Apache Cassandra 5.0 supports **Java 11** and **Java 17**. Java 17 has been fully supported since **5.0.5**; earlier 5.0.x releases treated it as experimental. **Java 21 is not supported** in Cassandra 5.0.
 
 Choosing the right JDK distribution and garbage collector directly impacts cluster throughput, p99 tail latency, and CPU efficiency.

@@ -39,6 +39,11 @@ def render(root, out_rel_cmd):
     w = out.append
     w("# cassandra.yaml Reference (generated)")
     w("")
+    w("> [!CAUTION]")
+    w("> Commands and settings on this page can change or delete data and affect running clusters. Try them on a "
+      "test or staging cluster first, and read the [disclaimer](../README.md#disclaimer). "
+      "The guide is provided \"as is\", without warranty.")
+    w("")
     w("> [!NOTE]")
     w(f"> **Generated** from Apache Cassandra **{version}** at git commit `{sha}` "
       "(`conf/cassandra.yaml`, `conf/cassandra_latest.yaml`, `Config.java`). Do not edit by hand.")

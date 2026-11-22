@@ -1,5 +1,8 @@
 # Querying with CQL: Clause by Clause, with Results
 
+> [!CAUTION]
+> Commands on this page can change or delete data and affect running clusters. Try them on a test or staging cluster first, and read the [disclaimer](../README.md#disclaimer). The guide is provided "as is", without warranty.
+
 This page teaches CQL `SELECT` one clause at a time. Every example runs against one small sample dataset and shows the output `cqlsh` prints. When Cassandra refuses a query, the page shows the exact error and what to do instead. You learn the rules faster by seeing what is refused than by reading the grammar.
 
 Every example on this page is run against Cassandra 5.0 by [`test_env` scenario 14](../test_env/README.md), and its output is compared with what is shown here. If an output on this page is wrong for 5.0, that scenario fails.

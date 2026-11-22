@@ -55,6 +55,7 @@ Follow the rules in [AI_USAGE.md §2](AI_USAGE.md#2-rules-for-assistants-answeri
 * Use 5.0 key names with units (`compaction_throughput: 64MiB/s`). Mention deprecated names only as aliases.
 * Say which template a default comes from whenever the two templates differ.
 * Label performance numbers as illustrative.
+* Every guide page starts with the `[!CAUTION]` notice under its title that links to `README.md#disclaimer`. Keep it, and copy it into new pages. The generators write it on the generated pages.
 * Commands must run as written. Don't put placeholders where a reader would paste them unchanged; use `<angle_brackets>` and say what to substitute.
 
 ## Licensing and trademarks: required

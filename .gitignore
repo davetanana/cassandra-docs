@@ -13,3 +13,5 @@ __pycache__/
 # Local agent settings (keep shared .claude/skills and .gemini/commands)
 .claude/settings.local.json
 .env
+# cassandra-stress example output (capacity planning page)
+stress-errors.log

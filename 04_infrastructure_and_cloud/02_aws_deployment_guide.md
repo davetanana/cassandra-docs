@@ -1,12 +1,15 @@
 # AWS Deployment Guide
 
+> [!CAUTION]
+> Commands on this page can change or delete data and affect running clusters. Try them on a test or staging cluster first, and read the [disclaimer](../README.md#disclaimer). The guide is provided "as is", without warranty.
+
 Running Apache Cassandra 5.0 on AWS means mapping Cassandra's datacenters and racks onto Regions and Availability Zones, choosing between instance-store NVMe and EBS, and configuring networking and backups. Instance specs and prices change; check current AWS documentation before sizing.
 
 ---
 
 ## 1. EC2 Instance Selection: Instance-Store NVMe vs. EBS
 
-| | Instance-store NVMe (e.g. `i4i`, `i3en`) | EBS `gp3` / `io2` (e.g. `m6i`, `r6i`) |
+| | Instance-store NVMe (e.g. `i4i`, `i7i`, `i8g`) | EBS `gp3` / `io2` (e.g. `m8g`, `m8i`) |
 | :--- | :--- | :--- |
 | Latency | Local device, lowest latency | Network-attached, higher and more variable latency |
 | Throughput / IOPS | High, fixed by instance size | Provisioned per volume; capped by the instance's EBS bandwidth |
@@ -21,10 +24,15 @@ Cassandra's replication (RF=3 across 3 AZs) is what protects data on instance st
 | :--- | :--- | :--- | :--- | :--- |
 | `i4i.2xlarge` | 8 | 64 GiB | 1 × 1,875 GB NVMe | General production baseline |
 | `i4i.4xlarge` | 16 | 128 GiB | 1 × 3,750 GB NVMe | Higher concurrency, larger data per node |
-| `i3en.3xlarge` | 12 | 96 GiB | 1 × 7,500 GB NVMe | Dense storage, lower request rates |
-| `m6i.2xlarge` + `gp3` | 8 | 32 GiB | EBS, provisioned IOPS/throughput | Moderate load, simpler recovery |
+| `i7i.2xlarge` | 8 | 64 GiB | 1 × 1,875 GB NVMe | Newer Intel generation: 300,000 read IOPS against i4i's 200,000, for about 10% more |
+| `i8g.2xlarge` | 8 | 64 GiB | 1 × 1,875 GB NVMe | Graviton4 (arm64): i7i's disk figures at i4i's price |
+| `i3en.3xlarge` | 12 | 96 GiB | 1 × 7,500 GB NVMe | Older generation; dense storage, lower request rates |
+| `m8g.2xlarge` + `gp3` | 8 | 32 GiB | EBS: 12,000 IOPS and 312.5 MB/s per instance (baseline) | Newest general purpose (Graviton4; `m8i` for x86). Moderate load, cache-friendly reads, simpler recovery |
 
-Very large per-node data (multiple TB) makes streaming, repair and replacement slow. Keep data per node at a size you can re-stream within your recovery-time objective.
+> [!NOTE]
+> **EBS caps by instance, not just by volume.** A gp3 volume can be provisioned up to 80,000 IOPS, but an `m8g.2xlarge` sustains only 12,000 IOPS of EBS traffic. Read-heavy workloads whose data doesn't fit in RAM usually need several times more EBS-backed nodes than `i`-family nodes; [capacity planning](../05_cluster_deployment_and_config/05_capacity_planning.md#11-machine-profiles-and-their-sources) compares them, with rough cost. Graviton (`i8g`, `m8g`) is arm64: the official Cassandra images support it, but check any agents and native libraries you add.
+
+Very large per-node data (multiple TB) makes streaming, repair and replacement slow. Keep data per node at a size you can re-stream within your recovery-time objective. [Capacity planning](../05_cluster_deployment_and_config/05_capacity_planning.md) works out the node count for these instance types, including the EC2 SLA.
 
 ---
 

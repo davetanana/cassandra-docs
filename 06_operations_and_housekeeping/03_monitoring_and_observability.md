@@ -1,5 +1,8 @@
 # Monitoring & Observability
 
+> [!CAUTION]
+> Commands on this page can change or delete data and affect running clusters. Try them on a test or staging cluster first, and read the [disclaimer](../README.md#disclaimer). The guide is provided "as is", without warranty.
+
 Cassandra exposes its internal state in four ways:
 
 1. **Virtual tables** (`system_views`): cluster state queryable with CQL, with no JMX needed.

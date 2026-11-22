@@ -2,6 +2,9 @@
 
 > **Independent documentation.** This is a community guide to [Apache Cassandra®](https://cassandra.apache.org/). It is not affiliated with, endorsed by, or sponsored by [The Apache Software Foundation](https://www.apache.org/). For the official documentation, see [cassandra.apache.org/doc](https://cassandra.apache.org/doc/5.0/).
 
+> [!CAUTION]
+> **Use at your own risk.** Many commands in this guide change or delete data, restart nodes or change cluster topology. Run them on a test or staging cluster before production. The guide is provided "as is", without warranty of any kind. Read the [disclaimer](#disclaimer).
+
 Runbooks and guidance for the parts of Cassandra 5.0 that teams find hardest in practice: data modeling, driver configuration, upgrades, repair, troubleshooting and restores. The pages follow the order in which a team meets Cassandra, from a first local node to disaster recovery. **New to Cassandra? Start with the [Quickstart](00_getting_started/01_quickstart.md).**
 
 **How this guide is checked:**
@@ -88,6 +91,7 @@ graph TD
 * **[02_cluster_deployment_runbook.md](05_cluster_deployment_and_config/02_cluster_deployment_runbook.md)**: install methods (tarball, deb, rpm, source), seeds, snitch choice, `allocate_tokens_for_local_replication_factor`, one-at-a-time bootstrap, adding a DC (`auto_bootstrap: false`, system keyspace RF, `nodetool rebuild`), and verification.
 * **[03_security_hardening.md](05_cluster_deployment_and_config/03_security_hardening.md)**: `system_auth` RF, password, network and CIDR authorizers, replacing the default superuser, client and internode TLS, mTLS authenticators, JMX, and audit logging.
 * **[04_upgrading_to_5_0.md](05_cluster_deployment_and_config/04_upgrading_to_5_0.md)**: supported paths (4.0/4.1 → 5.0), behavior changes, the rolling procedure, `storage_compatibility_mode` (CASSANDRA_4 → UPGRADING → NONE), adopting BTI, UCS, SAI and auto-repair, enabling Paxos v2, and rollback limits.
+* **[05_capacity_planning.md](05_cluster_deployment_and_config/05_capacity_planning.md)**: how many nodes of a given machine: storage, recovery time (streaming throttles cap data per node), read IOPS, write bandwidth and compaction, network, request size limits and benchmarked throughput. Then availability using the AWS, GCP and Azure VM SLAs, durability, and rough cost, comparing local NVMe (i4i/i7i/i8g, Z3, Lsv3/Lsv4) with network storage (m8g + gp3, N4 + Hyperdisk, Dsv6 + Premium SSD v2), with `tools/capacity_plan.py` and tested worked examples.
 
 ### Phase 6: Day-2 Operations
 > **Audience**: Operations engineers, on-call DBAs.
@@ -132,7 +136,7 @@ The generated pages and the drift checker live in [`tools/`](tools/README.md). R
 | **New to Cassandra** | [01_quickstart.md](00_getting_started/01_quickstart.md) | [02_tutorial_data_modeling.md](00_getting_started/02_tutorial_data_modeling.md) →  [01_mental_model.md](01_architecture_and_mental_model/01_mental_model.md) → [02_anti_patterns.md](01_architecture_and_mental_model/02_anti_patterns.md) → [01_schema_design_patterns.md](02_data_modeling_and_indexing/01_schema_design_patterns.md) → [05_querying_with_cql.md](03_application_development/05_querying_with_cql.md) |
 | **Backend / API developer** | [01_mental_model.md](01_architecture_and_mental_model/01_mental_model.md) | [01_schema_design_patterns.md](02_data_modeling_and_indexing/01_schema_design_patterns.md) → [01_performant_writes.md](03_application_development/01_performant_writes.md) → [05_querying_with_cql.md](03_application_development/05_querying_with_cql.md) → [03_client_drivers.md](03_application_development/03_client_drivers.md) → [04_consistency_and_transactions.md](03_application_development/04_consistency_and_transactions.md) |
 | **AI / ML engineer** | [02_indexing_and_vector_search.md](02_data_modeling_and_indexing/02_indexing_and_vector_search.md) | [01_schema_design_patterns.md](02_data_modeling_and_indexing/01_schema_design_patterns.md) → [02_performant_reads.md](03_application_development/02_performant_reads.md) |
-| **Cloud / DevOps engineer** | [01_java_and_jvm_flavors.md](04_infrastructure_and_cloud/01_java_and_jvm_flavors.md) | Cloud guide ([AWS](04_infrastructure_and_cloud/02_aws_deployment_guide.md) / [GCP](04_infrastructure_and_cloud/03_gcp_deployment_guide.md) / [Azure](04_infrastructure_and_cloud/04_azure_deployment_guide.md) / [Kubernetes](04_infrastructure_and_cloud/05_kubernetes.md)) → [01_configuration_and_tuning.md](05_cluster_deployment_and_config/01_configuration_and_tuning.md) → [02_cluster_deployment_runbook.md](05_cluster_deployment_and_config/02_cluster_deployment_runbook.md) → [03_security_hardening.md](05_cluster_deployment_and_config/03_security_hardening.md) |
+| **Cloud / DevOps engineer** | [01_java_and_jvm_flavors.md](04_infrastructure_and_cloud/01_java_and_jvm_flavors.md) | Cloud guide ([AWS](04_infrastructure_and_cloud/02_aws_deployment_guide.md) / [GCP](04_infrastructure_and_cloud/03_gcp_deployment_guide.md) / [Azure](04_infrastructure_and_cloud/04_azure_deployment_guide.md) / [Kubernetes](04_infrastructure_and_cloud/05_kubernetes.md)) → [05_capacity_planning.md](05_cluster_deployment_and_config/05_capacity_planning.md) → [01_configuration_and_tuning.md](05_cluster_deployment_and_config/01_configuration_and_tuning.md) → [02_cluster_deployment_runbook.md](05_cluster_deployment_and_config/02_cluster_deployment_runbook.md) → [03_security_hardening.md](05_cluster_deployment_and_config/03_security_hardening.md) |
 | **On-call SRE / DBA** | [03_tutorial_operations.md](00_getting_started/03_tutorial_operations.md) | [05_troubleshooting_playbook.md](06_operations_and_housekeeping/05_troubleshooting_playbook.md) →  [01_nodetool_operations_guide.md](06_operations_and_housekeeping/01_nodetool_operations_guide.md) → [02_housekeeping_and_automations.md](06_operations_and_housekeeping/02_housekeeping_and_automations.md) → [03_monitoring_and_observability.md](06_operations_and_housekeeping/03_monitoring_and_observability.md) → [01_backup_and_disaster_recovery.md](07_disaster_recovery/01_backup_and_disaster_recovery.md) |
 | **Upgrading from 4.x** | [04_upgrading_to_5_0.md](05_cluster_deployment_and_config/04_upgrading_to_5_0.md) | [01_mental_model.md](01_architecture_and_mental_model/01_mental_model.md) (template differences) → [04_compaction_strategies.md](06_operations_and_housekeeping/04_compaction_strategies.md) → [04_consistency_and_transactions.md](03_application_development/04_consistency_and_transactions.md) (Paxos v2) |
 | **Cassandra contributor** | [01_building_and_testing_from_source.md](08_developing_cassandra/01_building_and_testing_from_source.md) | [`CONTRIBUTING.md`](https://github.com/apache/cassandra/blob/cassandra-5.0/CONTRIBUTING.md), [`TESTING.md`](https://github.com/apache/cassandra/blob/cassandra-5.0/TESTING.md) |
@@ -154,6 +158,23 @@ The rules tell an assistant to stay within 5.0.x, to say which config template a
 ## Contributing
 
 Corrections and new runbooks are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first, and see [ROADMAP.md](ROADMAP.md) for the known gaps. Every claim must be backed by the Cassandra source or by a check in [`test_env/`](test_env/README.md).
+
+---
+
+## Disclaimer
+
+**Provided as is.** This guide, its examples, scripts and tools are provided under the [Apache License, Version 2.0](LICENSE) on an "AS IS" basis, **without warranties or conditions of any kind**, express or implied, including fitness for a particular purpose (License section 7). **In no event shall the authors or contributors be liable** for any damages arising from the use of, or inability to use, this guide, including data loss, downtime, lost revenue or the cost of recovery (License section 8). The License text governs; this summary doesn't change it.
+
+**You are responsible for what you run.** Commands, configuration changes and procedures here can delete data, take nodes or a whole cluster offline, change data placement or consistency, and cause cost. Before you run anything on a production system:
+
+* **Run it on a non-production cluster first**: a staging cluster that matches production's version, topology and configuration, or the disposable [`test_env`](test_env/README.md) cluster. Never point `test_env` scripts, `cassandra-stress` or load tests at production.
+* **Read and understand every command**, and replace each `<placeholder>`. Check names and defaults against your own Cassandra version.
+* **Take and verify a backup** before any operation that changes or removes data or topology ([backup and disaster recovery](07_disaster_recovery/01_backup_and_disaster_recovery.md)).
+* **Follow your organization's change management**, maintenance windows and approval process.
+
+**Estimates aren't guarantees.** Sizing results, performance figures, prices, SLAs and provider specifications are illustrative planning estimates based on public information on the date given. They change without notice. Confirm them with your provider and your own benchmarks before you make purchasing or architecture decisions.
+
+**Not professional advice, and no support.** Nothing here is legal, financial, security or compliance advice, and the guide comes with no support or service-level commitment. Answers that an AI assistant derives from this guide are the assistant's output, not the guide's, and need the same review.
 
 ---
 

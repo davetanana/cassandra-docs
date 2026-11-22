@@ -36,7 +36,7 @@ for p in $(cd "$DOCS_DIR" && grep -rlE --include='*.md' --exclude-dir=.git --exc
 done
 for p in $pages; do
   log "examples in $p"
-  ( cd "$ENV_DIR/shared" && check_doc_examples "$p" "$C" )   # sh: examples write scratch files to the cwd
+  ( cd "$DOCS_DIR" && check_doc_examples "$p" "$C" )   # sh: examples run from the repository root, as readers do
 done
 
 docker rm -f "$C" >/dev/null 2>&1
