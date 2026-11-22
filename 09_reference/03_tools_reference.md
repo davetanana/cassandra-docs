@@ -1,6 +1,6 @@
-# Tools Reference: cqlsh, SSTable Tools, Bulk Loading, Logs & Stress
+# Tools Reference: SSTable Tools, Bulk Loading, Logs & Stress
 
-This page covers every command-line tool that ships with Cassandra 5.0 except `nodetool`, which has its own [operations guide](../06_operations_and_housekeeping/01_nodetool_operations_guide.md). Options and defaults were taken from the 5.0 source (see [Sources](#sources)). Run any tool with `-h` / `--help` to see the full list for your build.
+This page covers every command-line tool that ships with Cassandra 5.0 except `nodetool`, which has its own [operations guide](../06_operations_and_housekeeping/01_nodetool_operations_guide.md), and `cqlsh`, which has its own [reference](06_cqlsh.md). Options and defaults were taken from the 5.0 source (see [Sources](#sources)). Run any tool with `-h` / `--help` to see the full list for your build.
 
 | Location | Tools |
 | :--- | :--- |
@@ -16,114 +16,7 @@ This page covers every command-line tool that ships with Cassandra 5.0 except `n
 
 ## 1. `cqlsh`: The CQL Shell
 
-`cqlsh` is a Python program (`bin/cqlsh.py` + `pylib/cqlshlib`) that uses the bundled Python driver. `bin/cqlsh` lists Python 3.8–3.11 as supported and accepts up to 3.13 (3.6–3.7 are deprecated).
-
-### Command-Line Options
-
-| Option | Purpose |
-| :--- | :--- |
-| `cqlsh [host [port]]` | Connect to a host (default `127.0.0.1` `9042`, or `$CQLSH_HOST` / `$CQLSH_PORT`) |
-| `-u`, `--username` / `-p`, `--password` | Authenticate. Passing `-p` on the command line prints a warning; use a credentials file instead (below). |
-| `-k`, `--keyspace` | Start in this keyspace |
-| `-f`, `--file FILE` | Run the statements in FILE, then exit |
-| `-e`, `--execute "STMT"` | Run one statement, then exit |
-| `--ssl` | Connect with TLS (configure `[ssl]` in cqlshrc) |
-| `--connect-timeout SECS` | Default **5** |
-| `--request-timeout SECS` | Default **10**. Raise it for long `SELECT`s or schema changes. |
-| `--protocol-version N` | Force a native protocol version |
-| `--cqlshrc PATH`, `--credentials PATH` | Alternative config and credentials files |
-| `--encoding`, `-C`/`--color`, `--no-color`, `-t`/`--tty`, `--disable-history`, `--debug` | Output and terminal behavior |
-
-### `~/.cassandra/cqlshrc` and `~/.cassandra/credentials`
-
-A fully commented sample ships as `conf/cqlshrc.sample`. The sections you will use most:
-
-```ini
-[authentication]
-credentials = ~/.cassandra/credentials   ; keeps passwords off the command line
-keyspace = my_ks
-
-[connection]
-hostname = 10.0.1.10
-port = 9042
-ssl = true
-timeout = 10            ; connect timeout, seconds
-request_timeout = 30
-
-[ssl]
-certfile = ~/keys/ca.pem      ; CA used to validate the server
-validate = true
-; userkey / usercert only when client_encryption_options.require_client_auth is true
-userkey = ~/keys/client.key
-usercert = ~/keys/client.pem
-
-[ui]
-time_format = %Y-%m-%d %H:%M:%S%z
-timezone = Etc/UTC
-float_precision = 5
-double_precision = 12
-
-[copy]                         ; defaults for COPY TO and COPY FROM
-numprocesses = 4
-[copy-from:my_ks.my_table]     ; per-table overrides: [copy:ks.t], [copy-from:ks.t], [copy-to:ks.t]
-ingestrate = 20000
-```
-
-```ini
-; ~/.cassandra/credentials  (chmod 600: cqlsh ignores the file, with a warning, if it is group/world-readable or not owned by you)
-[PlainTextAuthProvider]
-username = app_admin
-password = s3cret
-```
-
-### Shell Commands (cqlsh-only, not CQL)
-
-| Command | What it does |
-| :--- | :--- |
-| `CONSISTENCY [level]` | Show or set the CL for later statements. The cqlsh default is `ONE`. |
-| `SERIAL CONSISTENCY [SERIAL\|LOCAL_SERIAL]` | Serial CL for LWTs |
-| `TRACING ON\|OFF` | Print the server-side trace for each statement. Traces are written to `system_traces` (`trace_type_query_ttl`, default 1 day). |
-| `PAGING [ON\|OFF\|<n>]` | Interactive paging. The default page size is **100** rows; `PAGING 500` sets it. |
-| `EXPAND ON\|OFF` | Vertical (one column per line) output, useful for wide rows |
-| `CAPTURE 'file'` / `CAPTURE OFF` | Also send query output to a file |
-| `SOURCE 'file.cql'` | Run statements from a file |
-| `DESCRIBE ...` / `DESC ...` | Show schema. Since 4.0 this runs on the server; see the [CQL reference](04_cql_quick_reference.md#10-describe). |
-| `SHOW VERSION` / `SHOW HOST` / `SHOW SESSION <trace-id>` / `SHOW REPLICAS <token> [keyspace]` | Session info, a past trace, or the replicas for a token |
-| `LOGIN user ['pass']` | Re-authenticate as another role |
-| `COPY ...` | CSV import/export (below) |
-| `CLEAR` / `CLS`, `HISTORY`, `HELP [topic]`, `EXIT` / `QUIT` | Housekeeping |
-
-### `COPY TO` / `COPY FROM`: CSV Export and Import
-
-```sql
-COPY my_ks.users (user_id, email, created_at) TO '/tmp/users.csv' WITH HEADER = true;
-COPY my_ks.users (user_id, email, created_at) FROM '/tmp/users.csv' WITH HEADER = true AND MAXINSERTERRORS = 100;
-```
-
-| Option (applies to) | Default (from `copyutil.py`) | Notes |
-| :--- | :--- | :--- |
-| `DELIMITER`, `QUOTE`, `ESCAPE` (both) | `,` `"` `\` | |
-| `HEADER` (both) | `false` | |
-| `NULL` (both) | empty string | The string that represents null |
-| `DATETIMEFORMAT` (both) | the cqlshrc `time_format` | |
-| `NUMPROCESSES` (both) | cores − 1, capped at **16** | Worker processes |
-| `MAXATTEMPTS` (both) | 5 | Retries per batch or page |
-| `REPORTFREQUENCY`, `RATEFILE`, `CONFIGFILE`, `DECIMALSEP`, `THOUSANDSSEP`, `BOOLSTYLE` (both) | | Progress, rate log, alternative config file, number/boolean formats |
-| `INGESTRATE` (FROM) | 100000 rows/s | An approximate cap; lower it to protect a busy cluster |
-| `CHUNKSIZE` (FROM) | 5000 | Rows sent to each worker at a time |
-| `MINBATCHSIZE` / `MAXBATCHSIZE` (FROM) | 10 / 20 | Rows per **single-partition** unlogged batch |
-| `MAXROWS`, `SKIPROWS`, `SKIPCOLS` (FROM) | -1 (all), 0, none | |
-| `MAXPARSEERRORS` / `MAXINSERTERRORS` (FROM) | -1 (unlimited) / 1000 | Failed rows are written to `ERRFILE` |
-| `PREPAREDSTATEMENTS` (FROM) | true | |
-| `TTL` (FROM) | -1 (none) | Applies a TTL to every imported row |
-| `PAGESIZE` / `PAGETIMEOUT` (TO) | 1000 / 10 s (scaled up with page size) | |
-| `MAXREQUESTS` (TO) | 6 | Concurrent page requests per worker |
-| `BEGINTOKEN` / `ENDTOKEN` (TO) | full ring | Export a slice of the ring |
-| `MAXOUTPUTSIZE` (TO) | -1 | Split the output into files of N rows |
-| `ENCODING`, `FLOATPRECISION`, `DOUBLEPRECISION` (TO) | `utf8`, 5, 12 | |
-
-> [!NOTE]
-> `COPY` is meant for small to medium data sets (up to a few million rows) and for moving data between environments. It is not a backup tool. For bulk loads use `sstableloader` or a Spark job; for backups use snapshots ([DR runbook](../07_disaster_recovery/01_backup_and_disaster_recovery.md)). The sample `conf/cqlshrc.sample` comments show `chunksize = 1000` and `minbatchsize = 2`; the code defaults above are what actually applies when you set nothing.
+`cqlsh` has its own page: [cqlsh reference](06_cqlsh.md). It covers running it, interactive and scripted use (including exit codes), output formats, every shell command, reading a trace, `cqlshrc` and credentials files, and `COPY TO` / `COPY FROM` with all their options.
 
 ---
 

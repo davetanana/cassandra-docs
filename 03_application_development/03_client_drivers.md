@@ -2,7 +2,7 @@
 
 Your application talks to Cassandra through a native-protocol driver: the Apache Cassandra Java driver (formerly the DataStax Java driver), or drivers for Python, Go, Node.js, C#, Rust and others. Cassandra 5.0 speaks native protocol v3, v4 and v5 (v5 is the current version; v6 is beta only), and drivers negotiate the highest version both sides support.
 
-Configuring the driver properly is just as important as writing correct CQL. The examples use the Java driver 4.x (`application.conf` / HOCON); other drivers have equivalent settings.
+Configuring the driver properly is just as important as writing correct CQL. Rules 1–6 use the Java driver 4.x (`application.conf` / HOCON) for examples. [Section 7](#7-python-go-and-nodejs-same-rules-different-defaults) covers the Python, Go and Node.js drivers, whose defaults differ in ways that matter.
 
 ---
 
@@ -82,12 +82,14 @@ Raise `local.size` only if you measure that a single connection per node is satu
 
 The Java driver 4.x `DefaultLoadBalancingPolicy` is **token-aware and DC-aware by default**: it only uses nodes in the configured local datacenter, and it tries replicas of the statement's partition first.
 
-```
-Without token awareness:
-Client ────────► Any Coordinator ────────► Replica Nodes (extra hop)
-
-With token awareness:
-Client (computes token locally) ───────────► A Replica Node as Coordinator
+```mermaid
+flowchart LR
+    subgraph Without["Without token awareness: an extra hop"]
+        A1["Driver"] --> C1["Any node<br/>(coordinator)"] --> R1["The replicas"]
+    end
+    subgraph With["With token awareness"]
+        A2["Driver computes<br/>the partition's token"] --> R2["A replica,<br/>acting as coordinator"] --> R3["The other replicas"]
+    end
 ```
 
 ### Requirements for Token-Aware Routing to Work:
@@ -149,3 +151,110 @@ SimpleStatement statement = SimpleStatement.newInstance("UPDATE users SET status
 * **Paging**: the default page size is 5,000 rows (`basic.request.page-size`). See [02_performant_reads.md](02_performant_reads.md).
 * **Client timestamps**: the Java driver 4.x generates write timestamps on the client by default. Keep application hosts NTP-synchronized; clock skew between clients decides which concurrent write wins.
 * **Authentication and TLS**: configure `advanced.auth-provider` and `advanced.ssl-engine-factory` when the cluster enables `PasswordAuthenticator` and client encryption.
+
+---
+
+## 7. Python, Go and Node.js: Same Rules, Different Defaults
+
+Rules 1–6 apply to every driver: one long-lived session, a pinned local datacenter, token-aware routing, prepared statements, and explicit idempotence. The drivers don't share defaults, though, and two of the differences catch people out.
+
+The table compares the defaults in each driver's source. They were checked against the Java driver 4.x `reference.conf`, Python `cassandra-driver` 3.30.1, Go `github.com/apache/cassandra-gocql-driver/v2` (2.2.0) and Node.js `cassandra-driver` 4.10.0. Check your own version's documentation if you pin an older release.
+
+| Default | Java 4.x | Python | Go (gocql v2) | Node.js |
+| :--- | :--- | :--- | :--- | :--- |
+| Consistency level | `LOCAL_ONE` | `LOCAL_ONE` | **`QUORUM`** (counts replicas in every datacenter) | `LOCAL_ONE` |
+| Local datacenter | Required, unless you use only the default contact point | **Guessed** from the first contact point that answers, and logged | **Not used**: the default policy ignores datacenters | Required (`localDataCenter`). The client refuses to connect without it |
+| Load balancing | Token-aware, local DC only | Token-aware over DC-aware round-robin | **Plain round-robin** over all nodes, every DC | Token-aware, local DC, prefers less-busy replicas |
+| Request timeout | 2 s | 10 s | 11 s | 12 s (`readTimeout`, per coordinator) |
+| Page size | 5,000 | 5,000 | 5,000 | 5,000 |
+| Connections per node | 1 | 1 | 2 | 1 |
+| Statements prepared | When you call `prepare` | When you call `prepare` | Automatically, for `SELECT`, `INSERT`, `UPDATE`, `DELETE` and `BATCH` with bind values | **No**, unless you pass `{ prepare: true }` |
+| Idempotent by default | No | No | No | No |
+| Speculative execution | Off | Off | Off | Off |
+
+> [!WARNING]
+> **gocql's defaults are not multi-datacenter safe.** With no changes, a Go service sends requests to every node in every datacenter in turn, and waits for a `QUORUM` across all datacenters. In a two-DC cluster that puts cross-DC latency on every request and makes the service fail when the other DC is unreachable. Always set `Consistency` and `HostSelectionPolicy`, as in the example below.
+
+> [!NOTE]
+> **The Node.js driver doesn't prepare statements unless you ask.** Without `{ prepare: true }`, each query is parsed again on the server, the driver has to guess the parameter types, and token-aware routing can't compute the partition. Pass it on every `execute`, or set it once in `queryOptions` as below.
+
+The examples below use the `quickstart` keyspace and the single local node from the [quickstart](../00_getting_started/01_quickstart.md). Change `127.0.0.1` to your contact points and `datacenter1` to the datacenter name `nodetool status` shows for your cluster. The Python version is in [quickstart step 6](../00_getting_started/01_quickstart.md#6-connect-from-an-application).
+
+### Go (gocql v2)
+
+```bash
+go mod init example.com/quickstart && go get github.com/apache/cassandra-gocql-driver/v2
+```
+
+<!-- test: go -->
+```go
+package main
+
+import (
+	"fmt"
+	"log"
+
+	gocql "github.com/apache/cassandra-gocql-driver/v2"
+)
+
+func main() {
+	cluster := gocql.NewCluster("127.0.0.1")
+	cluster.Keyspace = "quickstart"
+	// gocql defaults to QUORUM and plain round-robin across every datacenter. Override both.
+	cluster.Consistency = gocql.LocalQuorum
+	cluster.PoolConfig.HostSelectionPolicy = gocql.TokenAwareHostPolicy(gocql.DCAwareRoundRobinPolicy("datacenter1"))
+
+	// Create one session at startup and share it; it is safe for concurrent use.
+	session, err := cluster.CreateSession()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer session.Close()
+
+	var value float64
+	err = session.Query(
+		`SELECT value FROM readings_by_sensor_day WHERE sensor_id = ? AND day = ? LIMIT 1`,
+		"s-1", "2026-11-22",
+	).Idempotent(true).Scan(&value)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("latest reading for s-1: %v\n", value)
+}
+```
+
+### Node.js
+
+```bash
+npm install cassandra-driver
+```
+
+<!-- test: nodejs -->
+```javascript
+const cassandra = require('cassandra-driver');
+
+// Create one Client at startup and share it.
+const client = new cassandra.Client({
+  contactPoints: ['127.0.0.1'],
+  localDataCenter: 'datacenter1',  // required
+  keyspace: 'quickstart',
+  queryOptions: {
+    consistency: cassandra.types.consistencies.localQuorum,
+    prepare: true,                 // off by default
+  },
+});
+
+async function main() {
+  const rs = await client.execute(
+    'SELECT value FROM readings_by_sensor_day WHERE sensor_id = ? AND day = ? LIMIT 1',
+    ['s-1', '2026-11-22'],
+    { isIdempotent: true },
+  );
+  console.log(`latest reading for s-1: ${rs.first().value}`);
+  await client.shutdown();
+}
+
+main().catch((err) => { console.error(err); process.exit(1); });
+```
+
+Both print `latest reading for s-1: 26.5` against the quickstart data.

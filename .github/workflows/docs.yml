@@ -41,6 +41,13 @@ jobs:
           sudo apt-get install -y shellcheck >/dev/null
           for f in test_env/scripts/*.sh test_env/scenarios/*.sh; do bash -n "$f"; done
           shellcheck -S error test_env/scripts/*.sh test_env/scenarios/*.sh
+      - name: Mermaid diagrams render (the same check GitHub's renderer would fail)
+        run: python3 tools/check_diagrams.py --render
+      - name: Site builds without warnings (broken links or anchors on the published site)
+        run: |
+          pip install -q -r tools/site-requirements.txt
+          python3 tools/build_site.py --repo-url "https://github.com/${{ github.repository }}"
+          mkdocs build --strict -f build/site/mkdocs.yml
       - name: Build AI bundle
         run: python3 tools/build_ai_bundle.py
       - uses: actions/upload-artifact@v4

@@ -20,6 +20,19 @@ Compaction merges SSTables in the background. This is how Cassandra keeps the nu
 | **TWCS** `TimeWindowCompactionStrategy` | One group of SSTables per time window (`compaction_window_unit` DAYS, `compaction_window_size` 1); STCS within the current window | Low for time-ordered reads | Low | Small | Time-series with a **uniform TTL** that is written in time order |
 | **UCS** `UnifiedCompactionStrategy` (new in 5.0) | Density-based levels and shards; can be tiered or leveled, configured per level | Configurable | Configurable | Low, because output is sharded and compactions run in parallel | General purpose; recommended for new 5.0 tables |
 
+A first choice for a new table (then read the sections below for the details):
+
+```mermaid
+flowchart TD
+    A["New table on 5.0"] --> B{"Time-series written in time order,<br/>with the same TTL on every row?"}
+    B -- yes --> TWCS["TWCS"]
+    B -- no --> C{"Can you test UCS<br/>for this workload?"}
+    C -- yes --> UCS["UCS (recommended for new 5.0 tables)"]
+    C -- "no, keep a strategy you know" --> D{"Read-heavy, with many<br/>updates or overwrites?"}
+    D -- yes --> LCS["LCS"]
+    D -- "no, write-heavy or insert-mostly" --> STCS["STCS"]
+```
+
 > [!NOTE]
 > `DateTieredCompactionStrategy` was **removed** in 5.0. Switch any DTCS table to TWCS before you upgrade.
 

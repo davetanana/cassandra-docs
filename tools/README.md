@@ -8,6 +8,10 @@ Scripts that keep these docs tied to the Apache Cassandra source. They read a **
 | `gen_nodetool_reference.py` | Generates `09_reference/02_nodetool_reference.md` from `NodeTool.java` and the `@Command` / `@Arguments` / `@Option` annotations in `tools/nodetool/*.java`. |
 | `check_docs.py` | Drift checker. It reports `nodetool` commands, subcommands and flags, and `cassandra.yaml` keys, that are used in the docs but don't exist in the given checkout. |
 | `cassandra_source.py` | Shared parsing helpers used by the three scripts. |
+| `build_ai_bundle.py` | Builds `llms.txt` and the single-file AI bundle from the README Table of Contents. `--check` fails if `llms.txt` is stale. |
+| `build_site.py` | Stages the pages and writes an MkDocs config for the searchable site on GitHub Pages. Install the pinned site packages with `pip install -r tools/site-requirements.txt`, then run `mkdocs build --strict -f build/site/mkdocs.yml` (or `mkdocs serve -f build/site/mkdocs.yml` to preview). CI builds it on every pull request; `.github/workflows/pages.yml` publishes it when you run that workflow by hand. |
+| `check_links.py` | Checks every relative link and `#anchor` in the Markdown pages. |
+| `check_diagrams.py` | Lints every Mermaid diagram (labels like `"1. Step"` render on GitHub as "Unsupported markdown: list"). With `--render` it also renders each diagram with the Mermaid CLI in Docker, so syntax errors fail before GitHub shows them. |
 
 ## Usage
 

@@ -19,7 +19,6 @@ x-cassandra: &cassandra
     CASSANDRA_NUM_TOKENS: "16"
     CASSANDRA_DC: dc1
     MAX_HEAP_SIZE: ${MAX_HEAP_SIZE:-1G}
-    HEAP_NEWSIZE: ${HEAP_NEWSIZE:-200M}
     # Extra JVM flags for every node, e.g. -Dcassandra.autorepair.enable=true (set by scenarios)
     JVM_EXTRA_OPTS: ${JVM_EXTRA_OPTS_ALL:-}
   volumes:

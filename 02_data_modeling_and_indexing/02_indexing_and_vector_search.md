@@ -59,6 +59,15 @@ CREATE INDEX idx_product_tags ON product_catalog (values(tags)) USING 'sai';
 
 `USING 'sai'` is shorthand for `CREATE CUSTOM INDEX ... USING 'StorageAttachedIndex'`. Both forms work.
 
+`CREATE INDEX` returns before the index is ready: each node builds it in the background from the SSTables it already has. Until enough replicas finish, queries that need the index fail with `ReadFailure ... INDEX_NOT_AVAILABLE`, even on an empty or tiny table. Check progress before you send traffic that depends on a new index:
+
+```sql
+SELECT index_name, is_queryable, is_building
+  FROM system_views.sai_column_indexes WHERE keyspace_name = '<keyspace>';
+```
+
+`system_views` tables are local to the node you're connected to, so run it on each node, or watch for the build to finish in each node's `system.log`. On a large table the build can take a long time and adds compaction-like I/O; create indexes before you load data when you can.
+
 > [!NOTE]
 > A plain `CREATE INDEX` **without** `USING 'sai'` builds a **legacy 2i** with the shipped `cassandra.yaml` (`default_secondary_index: legacy_local_table`). Only `conf/cassandra_latest.yaml` sets `default_secondary_index: sai`. Always specify `USING 'sai'` explicitly.
 
@@ -167,6 +176,7 @@ LIMIT 5;
 * `ANN OF` must be the **only** ordering. You cannot combine it with another `ORDER BY` column or use `DESC`.
 * Every column filtered in the `WHERE` clause (other than a full partition-key restriction) must have an SAI index. Clustering-column restrictions that can be served without filtering are also allowed.
 * A vector index supports only `ANN OF`. You cannot run `WHERE embedding = ...`.
+* `CREATE INDEX` on a vector column returns a client warning in 5.0: "SAI ANN indexes on vector columns are experimental and are not recommended for production use", followed by the limits above. The index is still created. Evaluate it under your own load before relying on it ([example](../03_application_development/05_querying_with_cql.md#1-set-up-the-sample-data)).
 
 ### The Golden Rule of Vector Search:
 > [!IMPORTANT]

@@ -29,6 +29,33 @@ Latency is relative: absolute numbers depend on hardware, network, RF and data s
 * **Reads**: `LOCAL_QUORUM`
 * **Result**: Read-your-writes within a datacenter, tolerating one replica down per DC, without waiting on remote DCs. Other DCs catch up asynchronously, via hints and read repair, and through scheduled repair.
 
+What happens with RF 3 when one replica is down:
+
+```mermaid
+sequenceDiagram
+    participant App as App (driver)
+    participant C as Coordinator
+    participant R1 as Replica 1
+    participant R2 as Replica 2
+    participant R3 as Replica 3 (down)
+    Note over App,R3: Write at LOCAL_QUORUM with RF 3 needs 2 acknowledgements
+    App->>C: INSERT (LOCAL_QUORUM)
+    C->>R1: mutation
+    C->>R2: mutation
+    C--xR3: mutation (no answer)
+    R1-->>C: ack
+    R2-->>C: ack
+    C-->>App: success after 2 of 3 acks
+    Note over C,R3: The coordinator keeps a hint for Replica 3 for up to max_hint_window (3h)
+    Note over App,R3: Read at LOCAL_QUORUM asks 2 replicas. 2 + 2 > 3, so at least one has the write
+    App->>C: SELECT (LOCAL_QUORUM)
+    C->>R1: data request
+    C->>R2: digest request
+    R1-->>C: data
+    R2-->>C: digest
+    C-->>App: newest value by timestamp (on a mismatch it repairs the stale replica first)
+```
+
 ```java
 SimpleStatement statement = SimpleStatement.newInstance("SELECT * FROM accounts WHERE id = ?")
     .setConsistencyLevel(DefaultConsistencyLevel.LOCAL_QUORUM);
@@ -96,6 +123,24 @@ Round-trips per the shipped `cassandra.yaml`:
 | `v2_without_linearizable_reads_or_rejected_writes` | 2 | 1 (weaker semantics) |
 
 v2 also keeps LWTs linearizable across safe range movements (bootstrap, decommission), which v1 does not guarantee.
+
+Where v1's four round trips go for one conditional write:
+
+```mermaid
+sequenceDiagram
+    participant C as Coordinator
+    participant R as Replicas (a quorum)
+    Note over C,R: One LWT write with paxos_variant v1
+    C->>R: 1. Prepare (new ballot)
+    R-->>C: Promise
+    C->>R: 2. Read the current row
+    R-->>C: Current values (the IF condition is checked)
+    C->>R: 3. Propose the new value
+    R-->>C: Accept
+    C->>R: 4. Commit
+    R-->>C: Ack
+    Note over C,R: v2 does the same write in two round trips
+```
 
 ### Enabling v2 on an existing cluster
 From the shipped `cassandra.yaml` and NEWS.txt:

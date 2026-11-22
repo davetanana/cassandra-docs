@@ -15,7 +15,7 @@ import sys
 
 LINK = re.compile(r'(?<!\!)\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)')
 FENCE = re.compile(r'^\s*(```|~~~)')
-SKIP_DIRS = {'.git', 'node_modules', 'dist', '__pycache__'}
+SKIP_DIRS = {'.git', 'node_modules', 'dist', 'build', '__pycache__'}
 
 
 def slug(heading):

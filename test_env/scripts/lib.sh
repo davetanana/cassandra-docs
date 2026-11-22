@@ -108,3 +108,58 @@ require_nodes() {
     docker inspect -f '{{.State.Running}}' "$n" 2>/dev/null | grep -q true || { log "node $n is not running; run scripts/up.sh"; exit 3; }
   done
 }
+
+# Print the fenced code block that follows a "<!-- test: NAME -->" marker in a doc page, so a scenario
+# runs exactly what the page shows. Usage: doc_block 00_getting_started/01_quickstart.md schema
+doc_block() {
+  awk -v want="<!-- test: $2 -->" '
+    $0 == want      { armed = 1; next }
+    armed && /^```/ { if (inb) exit; inb = 1; next }
+    inb             { print }' "$DOCS_DIR/$1"
+}
+
+# Print the SECOND fenced block after the marker: the expected output shown under an example.
+doc_result() {
+  awk -v want="<!-- test: $2 -->" '
+    $0 == want      { armed = 1; next }
+    armed && /^```/ { if (inb) { inb = 0; n++; if (n == 2) exit; next } inb = 1; next }
+    inb && n == 1   { print }' "$DOCS_DIR/$1"
+}
+
+# List the tested examples in a page as "NAME<TAB>anchor", where NAME is q:..., sh:... or run:... and
+# anchor is the GitHub anchor of the "## " section the example sits in.
+doc_examples() {
+  awk '
+    /^## / { a = tolower(substr($0, 4)); gsub(/[^a-z0-9 _-]/, "", a); gsub(/ /, "-", a) }
+    /^<!-- test: (q|sh|run):[^ ]+ -->$/ { n = $3; print n "\t" a }' "$DOCS_DIR/$1"
+}
+
+# Normalize cqlsh output for comparison: drop the "<stdin>:N:" error prefix that non-interactive cqlsh adds,
+# trailing spaces, and leading/trailing blank lines.
+_norm_out() {
+  sed -E -e 's/^<stdin>:[0-9]+://' -e 's/[[:space:]]+$//' |
+    awk 'NF { for (i = 0; i < blank; i++) print ""; blank = 0; started = 1; print; next } started { blank++ }'
+}
+
+# Run every tested example in a page against container $2 and record one check per example:
+#   q:NAME    a cql block, piped to cqlsh; its output must match the result block under it
+#   sh:NAME   a bash block, run on the host; its output must match the result block under it
+#   run:NAME  a cql block that must run without an error (output not compared: times, UUIDs, versions)
+check_doc_examples() {
+  local page="$1" c="$2" name anchor kind code out want
+  while IFS="$(printf '\t')" read -r name anchor <&3; do
+    kind="${name%%:*}"; code=$(doc_block "$page" "$name")
+    if [ -z "$code" ]; then fail "$page#$anchor" "example $name has a code block" "no fenced block after the marker"; continue; fi
+    if [ "$kind" = sh ]; then out=$(bash -c "$code" 2>&1)
+    else out=$(printf '%s\n' "$code" | docker exec -i "$c" cqlsh --no-color 2>&1); fi
+    if [ "$kind" = run ]; then
+      if printf '%s' "$out" | grep -qE 'Error|Exception'; then fail "$page#$anchor" "example $name runs" "$out"
+      else pass "$page#$anchor" "example $name runs"; fi
+      continue
+    fi
+    want=$(doc_result "$page" "$name" | _norm_out); out=$(printf '%s\n' "$out" | _norm_out)
+    if [ "$out" = "$want" ]; then pass "$page#$anchor" "example $name prints the documented output"
+    else fail "$page#$anchor" "example $name prints the documented output" \
+      "$(diff <(printf '%s\n' "$want") <(printf '%s\n' "$out") | head -8)"; fi
+  done 3< <(doc_examples "$page")
+}
